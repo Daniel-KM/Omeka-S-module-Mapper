@@ -1,0 +1,38 @@
+/* Import: styles */
+
+@media all {
+    header nav .mapper::before,
+    .mapper .subhead::before,
+    .mapper .no-resources::before {
+        content: ""; /* fontawesome f362 exchange-alt */
+    }
+
+    /* Edit mappings. */
+    .mapper #content form fieldset > .field:nth-of-type(2) .field-meta {
+        display: none;
+    }
+    .mapper #content form fieldset > .field:nth-of-type(2) .inputs {
+        width: 100%;
+    }
+    .mapper .CodeMirror {
+        font-family: inherit;
+        font-size: unset;
+        height: auto;
+    }
+    .mapper .inputs .CodeMirror {
+        font-family: inherit;
+        font-size: unset;
+        height: auto;
+        line-height: initial;
+    }
+    .mapper .CodeMirror {
+        border: 1px solid silver;
+        min-height: 70vh;
+    }
+    .mapper .CodeMirror-scroll {
+        min-height: 70vh;
+    }
+    .mapper .CodeMirror pre.CodeMirror-placeholder {
+        color: #999;
+    }
+}

@@ -1,0 +1,51 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var \Mapper\Api\Representation\MapperRepresentation $mapping
+ * @var \Mapper\Api\Representation\MapperRepresentation $resource
+ * @var \Mapper\Form\MappingForm $form
+ */
+
+$plugins = $this->getHelperPluginManager();
+$escape = $plugins->get('escapeHtml');
+$assetUrl = $plugins->get('assetUrl');
+$translate = $plugins->get('translate');
+
+$this->headLink()
+    ->appendStylesheet($assetUrl('vendor/codemirror/lib/codemirror.css', 'Mapper'))
+    ->appendStylesheet($assetUrl('vendor/codemirror/addon/hint/show-hint.css', 'Mapper'))
+    ->appendStylesheet($assetUrl('css/mapper.css', 'Mapper'));
+$this->headScript()
+    ->appendFile($assetUrl('vendor/codemirror/lib/codemirror.js', 'Mapper'))
+    ->appendFile($assetUrl('vendor/codemirror/addon/display/placeholder.js', 'Mapper'))
+    // ->appendFile($assetUrl('vendor/codemirror/addon/edit/closetag.js', 'DataTypeRdf'))
+    ->appendFile($assetUrl('vendor/codemirror/addon/edit/matchtags.js', 'DataTypeRdf'))
+    ->appendFile($assetUrl('vendor/codemirror/addon/edit/trailingspace.js', 'DataTypeRdf'))
+    ->appendFile($assetUrl('vendor/codemirror/addon/fold/xml-fold.js', 'DataTypeRdf'))
+    ->appendFile($assetUrl('vendor/codemirror/addon/hint/show-hint.js', 'Mapper'))
+    ->appendFile($assetUrl('vendor/codemirror/addon/hint/xml-hint.js', 'Mapper'))
+    ->appendFile($assetUrl('vendor/codemirror/mode/xml/xml.js', 'Mapper'))
+    ->appendFile($assetUrl('js/mapper.js', 'Mapper'));
+
+$this->htmlElement('body')->appendAttribute('class', 'mapper edit');
+
+$form->prepare();
+?>
+
+<?= $this->pageTitle($translate('Edit mapping'), 1, $translate('Mapper')) ?>
+
+<div id="mapper">
+    <h2><?= $escape($translate('Edit mapping')) ?></h2>
+    <?php
+    $submit = $form->get('submit');
+    $submit->setAttribute('form', $form->getAttribute('id'));
+    $form->remove('submit');
+    echo $this->form()->openTag($form);
+    echo $this->formCollection($form);
+    echo $this->form()->closeTag();
+    ?>
+</div>
+
+<div id="page-actions">
+    <?= $this->formSubmit($submit) ?>
+</div>

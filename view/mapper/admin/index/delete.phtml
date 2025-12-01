@@ -1,0 +1,32 @@
+<?php
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var \Mapper\Api\Representation\MapperRepresentation $mapping
+ * @var \Mapper\Api\Representation\MapperRepresentation $resource
+ * @var \Mapper\Form\MappingDeleteForm $form
+ */
+
+$plugins = $this->getHelperPluginManager();
+$escape = $plugins->get('escapeHtml');
+$assetUrl = $plugins->get('assetUrl');
+$translate = $plugins->get('translate');
+
+$this->headLink()
+    ->appendStylesheet($assetUrl('css/mapper.css', 'Mapper'));
+
+$this->htmlElement('body')->appendAttribute('class', 'mapper delete');
+
+$form->prepare();
+?>
+
+<?= $this->pageTitle($translate('Delete mapping'), 1, $translate('Mapper')) ?>
+
+<div id="mapper">
+    <h2><?= $escape(sprintf($translate('Delete mapping (%s)'), $resource->label())) ?></h2>
+    <p><?= $escape($translate('Are you sure you want to delete this mapping?')) ?></p>
+    <?php
+    echo $this->form()->openTag($form);
+    echo $this->formCollection($form);
+    echo $this->form()->closeTag();
+    ?>
+</div>

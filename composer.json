@@ -1,0 +1,97 @@
+{
+    "name": "daniel-km/omeka-s-module-mapper",
+    "description": "Module for Omeka S implementing a way to map and convert values for filling, import, export from/to spreadsheet/json/xml.",
+    "type": "library",
+    "license": "CECILL-2.1",
+    "authors": [
+        {
+            "name": "Daniel Berthereau",
+            "email": "Daniel.packagist@Berthereau.net"
+        }
+    ],
+    "homepage": "https://gitlab.com/Daniel-KM/Omeka-S-module-Mapper",
+    "support": {
+        "issues": "https://gitlab.com/Daniel-KM/Omeka-S-module-Mapper/-/issues",
+        "forum": "https://forum.omeka.org/"
+    },
+    "keywords": [
+        "Omeka S",
+        "module",
+        "admin",
+        "mapper",
+        "import",
+        "migration"
+    ],
+    "require": {
+        "ext-xml": "*",
+        "codemirror/codemirror": "^5.65",
+        "daniel-km/simple-iso-3166-1": "^0.2",
+        "daniel-km/simple-iso-639-3": "^0.2",
+        "hakre/xmlreaderiterator": "^0.1",
+        "mtdowling/jmespath.php": "^2.7",
+        "oomphinc/composer-installers-extender": "^2.0",
+        "openspout/openspout": "^3.7",
+        "softcreatr/jsonpath": "^0.7"
+    },
+    "replace": {
+        "symfony/polyfill-mbstring": "*"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "MapperTest\\": "test/MapperTest/"
+        }
+    },
+    "repositories": [
+        {
+            "type": "package",
+            "package": {
+                "type": "omeka-addon-asset",
+                "name": "codemirror/codemirror",
+                "version": "5.65.20",
+                "dist": {
+                    "type": "zip",
+                    "url": "https://codemirror.net/5/codemirror.zip"
+                }
+            }
+        },
+        {
+            "type": "package",
+            "package": {
+                "name": "hakre/xmlreaderiterator",
+                "version": "0.1.13",
+                "dist": {
+                    "type": "tar",
+                    "url": "https://github.com/Daniel-KM/XMLReaderIterator/archive/refs/tags/v0.1.13.tar.gz"
+                }
+            }
+        }
+    ],
+    "extra": {
+        "installer-types": [
+            "omeka-addon-asset"
+        ],
+        "installer-paths": {
+            "asset/vendor/{$name}/": [
+                "type:omeka-addon-asset"
+            ]
+        },
+        "installer-name" : "Mapper"
+    },
+    "scripts": {
+        "post-install-cmd": "@build",
+        "post-update-cmd": "@build",
+        "build": [
+            "# Fix deprecation for JsonPath 0.7.6 on php 8 (minimum required by Omeka is php 7.4)",
+            "@php -r '$f = __DIR__ . \"/vendor/softcreatr/jsonpath/src/JSONPath.php\"; $c = file_get_contents($f); $a1 = \"*/\n    public function offsetGet(\"; $a2 = \"*/\n    public function current(\"; $a3 = \"*/\n    public function key(\"; $r = \"*/\n    #[\\ReturnTypeWillChange]\"; file_put_contents($f, strtr($c, [$a1 => $r . substr($a1, 2), $a2 => $r . substr($a2, 2), $a3 => $r . substr($a3, 2)]));'"
+        ]
+    },
+    "config": {
+        "platform": {
+            "php": "7.4"
+        },
+        "allow-plugins": {
+            "composer/installers": true,
+            "oomphinc/composer-installers-extender": true
+        }
+    }
+}
