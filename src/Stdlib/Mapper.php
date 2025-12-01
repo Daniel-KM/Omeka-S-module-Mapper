@@ -1140,8 +1140,32 @@ class Mapper
 
         $xpath = new DOMXPath($xml);
 
+        // Register common rdf namespaces as fallbacks.
+        // These are used by IdRef, BnF, and other authority providers.
+        static $commonNamespaces = [
+            'bio' => 'http://purl.org/vocab/bio/0.1/',
+            'bnf-onto' => 'http://data.bnf.fr/ontology/bnf-onto/',
+            'dbpedia-owl' => 'http://dbpedia.org/ontology/',
+            'dc' => 'http://purl.org/dc/elements/1.1/',
+            'dcterms' => 'http://purl.org/dc/terms/',
+            'foaf' => 'http://xmlns.com/foaf/0.1/',
+            'idref' => 'http://www.idref.fr/',
+            'isni' => 'https://isni.org/ontology#',
+            'owl' => 'http://www.w3.org/2002/07/owl#',
+            'rdaGr2' => 'http://rdvocab.info/ElementsGr2/',
+            'rdaGr3' => 'http://rdvocab.info/ElementsGr3/',
+            'rdf' => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+            'rdfs' => 'http://www.w3.org/2000/01/rdf-schema#',
+            'skos' => 'http://www.w3.org/2004/02/skos/core#',
+            'xsd' => 'http://www.w3.org/2001/XMLSchema#',
+        ];
+        foreach ($commonNamespaces as $prefix => $uri) {
+            $xpath->registerNamespace($prefix, $uri);
+        }
+
         // Auto-register namespaces from the document for XPath queries.
         // This allows queries like /foaf:Person/foaf:name to work.
+        // Document namespaces override the common ones if different.
         foreach ($xpath->query('namespace::*', $xml->documentElement) ?: [] as $node) {
             $prefix = $node->localName;
             $uri = $node->nodeValue;
