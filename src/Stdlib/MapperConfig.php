@@ -687,7 +687,8 @@ class MapperConfig
         $matches = [];
 
         // Find all {{ ... }} expressions.
-        preg_match_all('/\{\{[^}]+\}\}/', $pattern, $matches);
+        // Use non-greedy .*? to handle nested braces like {{ value|table({'key': 'val'}) }}.
+        preg_match_all('/\{\{.+?\}\}/s', $pattern, $matches);
         foreach ($matches[0] as $match) {
             // Check if it's a twig filter (contains |).
             if (mb_strpos($match, '|') !== false) {
@@ -701,10 +702,22 @@ class MapperConfig
 
         $simpleMatches = [];
 
-        // Also find simple {path} replacements.
+        // Also find simple {path} replacements, but not inner parts of {{ }}.
         preg_match_all('/\{[^{}]+\}/', $pattern, $simpleMatches);
         foreach ($simpleMatches[0] as $match) {
-            if (!in_array($match, $result['replace'])) {
+            // Skip if already in replace or if it's the inner part of a {{ }} expression.
+            if (in_array($match, $result['replace'])) {
+                continue;
+            }
+            // Check if this single-brace match is inside a double-brace expression.
+            $isInsideDoubleBrace = false;
+            foreach (array_merge($result['twig'], $result['replace']) as $doubleBraceExpr) {
+                if (mb_strpos($doubleBraceExpr, $match) !== false) {
+                    $isInsideDoubleBrace = true;
+                    break;
+                }
+            }
+            if (!$isInsideDoubleBrace) {
                 $result['replace'][] = $match;
             }
         }
