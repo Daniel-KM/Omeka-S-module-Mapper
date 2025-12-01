@@ -118,7 +118,7 @@ trait FilterTrait
 
         switch ($function) {
             case 'abs':
-                return is_numeric($stringValue) ? (string) abs($stringValue) : $stringValue;
+                return is_numeric($stringValue) ? (string) abs((float) $stringValue) : $stringValue;
 
             case 'basename':
                 return basename($stringValue);
