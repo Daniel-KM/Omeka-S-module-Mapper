@@ -640,12 +640,18 @@ trait FilterTrait
     }
 
     /**
-     * Convert a value to string, handling DOMNode objects.
+     * Convert a value to string, handling DOMNode objects and arrays.
      */
     protected function valueToString($value): string
     {
         if ($value instanceof \DOMNode) {
             return (string) $value->nodeValue;
+        }
+        if (is_array($value)) {
+            $value = reset($value);
+            return $value instanceof \DOMNode
+                ? (string) $value->nodeValue
+                : (string) $value;
         }
         return (string) $value;
     }
