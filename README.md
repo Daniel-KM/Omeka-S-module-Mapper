@@ -121,7 +121,7 @@ of the CeCILL license and that you accept its terms.
 Copyright
 ---------
 
-- Copyright Daniel Berthereau, 2012-2025 (see [Daniel-KM] on GitLab)
+- Copyright Daniel Berthereau, 2012-2026 (see [Daniel-KM] on GitLab)
 
 This module is a merge and improvement of previous modules [Advanced Resource Template],
 [CopIdRef], [Bulk Import] and various old scripts.

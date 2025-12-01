@@ -7,7 +7,7 @@
     Important : to load images, the extension "highres" should be allowed in main settings, or 
     the security file check should be disabled.
 
-    @copyright Daniel Berthereau, 2021-2025
+    @copyright Daniel Berthereau, 2021-2026
     @license CeCILL 2.1 https://cecill.info/licences/Licence_CeCILL_V2.1-fr.txt
 -->
 

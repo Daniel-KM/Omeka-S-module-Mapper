@@ -5,7 +5,7 @@
  *
  * Supports ini-style text, xml, and array formats for mapping definitions.
  *
- * @copyright Daniel Berthereau, 2017-2025
+ * @copyright Daniel Berthereau, 2017-2026
  * @license http://www.cecill.info/licences/Licence_CeCILL_V2.1-en.txt
  */
 

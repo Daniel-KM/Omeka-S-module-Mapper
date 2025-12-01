@@ -14,7 +14,7 @@ use Omeka\Module\AbstractModule;
  *
  * A tool to convert values from a source to values in Omeka resources.
  *
- * @copyright Daniel Berthereau, 2013-2025
+ * @copyright Daniel Berthereau, 2013-2026
  * @license http://www.cecill.info/licences/Licence_CeCILL_V2.1-en.txt
  */
 class Module extends AbstractModule

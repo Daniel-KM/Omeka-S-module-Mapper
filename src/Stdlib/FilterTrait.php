@@ -3,7 +3,7 @@
 /**
  * Mapper filter trait for Twig-like value transformations.
  *
- * @copyright Daniel Berthereau, 2017-2025
+ * @copyright Daniel Berthereau, 2017-2026
  * @license http://www.cecill.info/licences/Licence_CeCILL_V2.1-en.txt
  */
 

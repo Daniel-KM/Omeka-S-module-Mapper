@@ -6,7 +6,7 @@
 
     To download files, see the xsl file "sru.dublin-core_with_file_gallica_to_omeka.xsl".
 
-    @copyright Daniel Berthereau, 2021-2025
+    @copyright Daniel Berthereau, 2021-2026
     @license CeCILL 2.1 https://cecill.info/licences/Licence_CeCILL_V2.1-fr.txt
 -->
 
