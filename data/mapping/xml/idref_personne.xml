@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Alignement de IdRef Personne (Unimarc Autorité) vers ressource Omeka (foaf, bio, dcterms, bibo).
+
+Ce mapping est destiné à convertir les données xml récupérées depuis IdRef
+pour enrichir les ressources Omeka avec des informations d'autorité.
+
+Cet alignement a été réalisé pour Manioc.org
+@link https://manioc.org
+
+@link https://www.idref.fr
+@link https://documentation.abes.fr/sudoc/formats/unmb/index.htm
+
+@copyright Daniel Berthereau, 2023-2025
+@license http://www.cecill.info/licences/Licence_CeCILL_V2.1-en.txt
+-->
+
+<mapping>
+
+    <info>
+        <label>IdRef Personne to Omeka</label>
+        <from>rdf</from>
+        <to>resources</to>
+        <querier>xpath</querier>
+        <media_type>application/rdf+xml</media_type>
+    </info>
+
+    <!-- Valeurs par défaut (sans <from>). -->
+
+    <map>
+        <to field="o:resource_class"/>
+        <mod raw="foaf:Person"/>
+    </map>
+
+    <map>
+        <to field="o:resource_template"/>
+        <mod raw="Personne"/>
+    </map>
+
+    <!-- Alignement des valeurs IdRef avec les ontologies Omeka. -->
+
+    <map>
+        <from xpath="//foaf:Person/foaf:name"/>
+        <to field="foaf:name"/>
+    </map>
+
+    <map>
+        <from xpath="//foaf:Person/foaf:familyName"/>
+        <to field="foaf:familyName"/>
+    </map>
+
+    <map>
+        <from xpath="//foaf:Person/foaf:givenName"/>
+        <to field="foaf:givenName"/>
+    </map>
+
+    <map>
+        <from xpath="//bio:Birth/bio:date"/>
+        <to field="bio:birth"
+            datatype="numeric:timestamp"/>
+    </map>
+
+    <map>
+        <from xpath="//bio:Death/bio:date"/>
+        <to field="bio:death"
+            datatype="numeric:timestamp"/>
+    </map>
+
+    <!-- Genre en français. -->
+    <map>
+        <from xpath="//foaf:Person/foaf:gender"/>
+        <to field="foaf:gender"/>
+        <mod pattern="{{ value|table({'female': 'Féminin', 'male': 'Masculin'}) }}"/>
+    </map>
+
+    <!-- IdRef format: http://lexvo.org/id/iso639-3/fra => http://id.loc.gov/vocabulary/iso639-2/fra -->
+    <map>
+        <from xpath="//dcterms:language/@rdf:resource"/>
+        <to field="dcterms:language"
+            datatype="valuesuggest:lc:iso6392"/>
+        <mod pattern="http://id.loc.gov/vocabulary/iso639-2/{{ value|split('/', 10)|last }}"/>
+    </map>
+
+    <map>
+        <from xpath="//bio:place/@rdf:resource"/>
+        <to field="bio:place"
+            datatype="valuesuggest:geonames:geonames"/>
+    </map>
+
+    <map>
+        <from xpath="//foaf:Person/rdaGr2:professionOrOccupation"/>
+        <to field="bio:position"/>
+    </map>
+
+    <map>
+        <from xpath="//skos:note"/>
+        <to field="bio:biography"/>
+    </map>
+
+    <map>
+        <from xpath="//foaf:Person/@rdf:about"/>
+        <to field="bibo:identifier"
+            datatype="valuesuggest:idref:person"/>
+    </map>
+
+    <map>
+        <from xpath="//skos:altLabel"/>
+        <to field="dcterms:alternative"/>
+    </map>
+
+    <map>
+        <from xpath="//owl:sameAs/@rdf:resource"/>
+        <to field="dcterms:relation"
+            datatype="uri"/>
+    </map>
+
+    <map>
+        <from xpath="//foaf:Person/foaf:page/@rdf:resource"/>
+        <to field="bibo:uri"
+            datatype="uri"/>
+    </map>
+
+</mapping>
