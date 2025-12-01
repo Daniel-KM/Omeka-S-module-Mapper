@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record>
+    <identifier>TEST-001</identifier>
+    <title>Test Record Title</title>
+    <creator>Test Creator</creator>
+    <date>2024-01-15</date>
+    <description>This is a test description for mapping purposes.</description>
+    <subject>Test Subject 1</subject>
+    <subject>Test Subject 2</subject>
+</record>

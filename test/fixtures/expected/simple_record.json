@@ -1,0 +1,8 @@
+{
+    "dcterms:title": ["Test Record Title"],
+    "dcterms:creator": ["Test Creator"],
+    "dcterms:date": ["2024-01-15"],
+    "dcterms:description": ["This is a test description for mapping purposes."],
+    "dcterms:subject": ["Test Subject 1", "Test Subject 2"],
+    "dcterms:identifier": ["TEST-001"]
+}

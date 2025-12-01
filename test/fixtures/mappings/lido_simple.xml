@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Simple LIDO mapping for testing.
+-->
+<mapping xmlns:lido="http://www.lido-schema.org">
+    <info>
+        <label>Simple LIDO Test Mapping</label>
+        <from>lido</from>
+        <to>omeka</to>
+    </info>
+
+    <!-- Identifiant -->
+    <map>
+        <from xpath="//lido:lidoRecID"/>
+        <to field="dcterms:identifier" datatype="literal"/>
+    </map>
+
+    <!-- Titre -->
+    <map>
+        <from xpath="//lido:objectIdentificationWrap/lido:titleWrap/lido:titleSet/lido:appellationValue"/>
+        <to field="dcterms:title" datatype="literal"/>
+    </map>
+
+    <!-- Type d'objet -->
+    <map>
+        <from xpath="//lido:objectClassificationWrap/lido:objectWorkTypeWrap/lido:objectWorkType/lido:term"/>
+        <to field="dcterms:type" datatype="literal"/>
+    </map>
+
+    <!-- Créateur -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event/lido:eventActor/lido:actorInRole/lido:actor/lido:nameActorSet/lido:appellationValue"/>
+        <to field="dcterms:creator" datatype="literal"/>
+    </map>
+
+    <!-- Date de création -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event/lido:eventDate/lido:displayDate"/>
+        <to field="dcterms:created" datatype="literal"/>
+    </map>
+
+    <!-- Description -->
+    <map>
+        <from xpath="//lido:objectIdentificationWrap/lido:objectDescriptionWrap/lido:objectDescriptionSet/lido:descriptiveNoteValue"/>
+        <to field="dcterms:description" datatype="literal"/>
+    </map>
+</mapping>

@@ -36,6 +36,11 @@
     "replace": {
         "symfony/polyfill-mbstring": "*"
     },
+    "autoload": {
+        "psr-4": {
+            "Mapper\\": "src/"
+        }
+    },
     "autoload-dev": {
         "psr-4": {
             "MapperTest\\": "test/MapperTest/"
@@ -66,6 +71,23 @@
             }
         }
     ],
+    "config": {
+        "platform": {
+            "php": "7.4"
+        },
+        "allow-plugins": {
+            "composer/installers": true,
+            "oomphinc/composer-installers-extender": true
+        }
+    },
+    "scripts": {
+        "post-install-cmd": "@build",
+        "post-update-cmd": "@build",
+        "build": [
+            "# Fix deprecation for JsonPath 0.7.6 on php 8 (minimum required by Omeka is php 7.4)",
+            "@php -r '$f = __DIR__ . \"/vendor/softcreatr/jsonpath/src/JSONPath.php\"; $c = file_get_contents($f); $a1 = \"*/\n    public function offsetGet(\"; $a2 = \"*/\n    public function current(\"; $a3 = \"*/\n    public function key(\"; $r = \"*/\n    #[\\ReturnTypeWillChange]\"; file_put_contents($f, strtr($c, [$a1 => $r . substr($a1, 2), $a2 => $r . substr($a2, 2), $a3 => $r . substr($a3, 2)]));'"
+        ]
+    },
     "extra": {
         "installer-types": [
             "omeka-addon-asset"
@@ -76,22 +98,5 @@
             ]
         },
         "installer-name" : "Mapper"
-    },
-    "scripts": {
-        "post-install-cmd": "@build",
-        "post-update-cmd": "@build",
-        "build": [
-            "# Fix deprecation for JsonPath 0.7.6 on php 8 (minimum required by Omeka is php 7.4)",
-            "@php -r '$f = __DIR__ . \"/vendor/softcreatr/jsonpath/src/JSONPath.php\"; $c = file_get_contents($f); $a1 = \"*/\n    public function offsetGet(\"; $a2 = \"*/\n    public function current(\"; $a3 = \"*/\n    public function key(\"; $r = \"*/\n    #[\\ReturnTypeWillChange]\"; file_put_contents($f, strtr($c, [$a1 => $r . substr($a1, 2), $a2 => $r . substr($a2, 2), $a3 => $r . substr($a3, 2)]));'"
-        ]
-    },
-    "config": {
-        "platform": {
-            "php": "7.4"
-        },
-        "allow-plugins": {
-            "composer/installers": true,
-            "oomphinc/composer-installers-extender": true
-        }
     }
 }
