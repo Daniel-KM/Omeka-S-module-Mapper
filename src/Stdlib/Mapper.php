@@ -959,6 +959,59 @@ class Mapper
                 break;
         }
 
+        // Convert simple values to array format with metadata from $to.
+        // This ensures datatype, language, and visibility are preserved.
+        if ($fieldType !== 'array' && $fieldType !== 'arrays') {
+            $datatype = $to['datatype'][0] ?? null;
+            $language = $to['language'] ?? null;
+            $isPublic = $to['is_public'] ?? null;
+
+            $results = array_map(function ($v) use ($datatype, $language, $isPublic) {
+                if (is_array($v)) {
+                    // Already array format, just add missing metadata.
+                    if ($datatype && !isset($v['type'])) {
+                        $v['type'] = $datatype;
+                    }
+                    if ($language && !isset($v['@language'])) {
+                        $v['@language'] = $language;
+                    }
+                    if ($isPublic !== null && !isset($v['is_public'])) {
+                        $v['is_public'] = $isPublic;
+                    }
+                    return $v;
+                }
+
+                // Convert string value to array format.
+                $stringValue = (string) $v;
+                $result = [];
+
+                // Determine type: use datatype if set, otherwise detect uri/literal.
+                if ($datatype) {
+                    $result['type'] = $datatype;
+                } elseif (filter_var($stringValue, FILTER_VALIDATE_URL)) {
+                    $result['type'] = 'uri';
+                } else {
+                    $result['type'] = 'literal';
+                }
+
+                // Set value in appropriate key based on type.
+                if ($result['type'] === 'uri' || str_starts_with($result['type'], 'valuesuggest:')) {
+                    $result['@id'] = $stringValue;
+                } else {
+                    $result['@value'] = $stringValue;
+                }
+
+                if ($language) {
+                    $result['@language'] = $language;
+                }
+                if ($isPublic !== null) {
+                    $result['is_public'] = $isPublic;
+                }
+
+                return $result;
+            }, $results);
+        }
+
         // Append to resource.
         if (empty($resource[$field])) {
             $resource[$field] = $results;
