@@ -217,6 +217,8 @@ class IndexController extends AbstractActionController
     /**
      * Get the current mapper from route params.
      *
+     * The mapper may be an object or an id for internal mapping.
+     *
      * @return MapperRepresentation|string|\Laminas\Http\Response
      */
     protected function getMapper()

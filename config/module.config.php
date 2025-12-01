@@ -73,19 +73,24 @@ return [
                                 'options' => [
                                     'route' => '[/:action]',
                                     'constraints' => [
-                                        'action' => '[a-zA-Z][a-zA-Z0-9_-]*',
+                                        'action' => 'index|browse|add',
                                     ],
                                     'defaults' => [
                                         'action' => 'browse',
                                     ],
                                 ],
+                                // Higher priority than 'id' route to match actions first,
+                                // since add, browse and index can be id below.
+                                'priority' => 1,
                             ],
                             'id' => [
                                 'type' => \Laminas\Router\Http\Segment::class,
                                 'options' => [
                                     'route' => '/:id[/:action]',
                                     'constraints' => [
-                                        'action' => '[a-zA-Z][a-zA-Z0-9_-]*',
+                                        'action' => 'show|edit|copy|delete',
+                                        // Action names above are automatically managed
+                                        // with priority above.
                                         'id' => '[a-zA-Z0-9_-]+',
                                     ],
                                     'defaults' => [
