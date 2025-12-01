@@ -78,7 +78,7 @@ Cet alignement a été réalisé pour Manioc.org
         <from xpath="//dcterms:language/@rdf:resource"/>
         <to field="dcterms:language"
             datatype="valuesuggest:lc:iso6392"/>
-        <mod pattern="http://id.loc.gov/vocabulary/iso639-2/{{ value|split('/', 10)|last }}"/>
+        <mod pattern="http://id.loc.gov/vocabulary/iso639-2/{{ value|split('/')|last }}"/>
     </map>
 
     <map>

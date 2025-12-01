@@ -110,13 +110,18 @@ trait FilterTrait
             $args = '';
         }
 
-        // Convert DOMNode to string.
-        $value = $this->valueToString($value);
-        $stringValue = is_array($value) ? $this->valueToString(reset($value)) : $value;
+        // Convert DOMNode to string, but preserve arrays for filters like last/first/join.
+        if ($value instanceof \DOMNode) {
+            $value = (string) $value->nodeValue;
+        }
+        $stringValue = is_array($value) ? $this->valueToString(reset($value)) : (string) $value;
 
         switch ($function) {
             case 'abs':
                 return is_numeric($stringValue) ? (string) abs($stringValue) : $stringValue;
+
+            case 'basename':
+                return basename($stringValue);
 
             case 'capitalize':
                 return ucfirst($stringValue);
@@ -192,7 +197,12 @@ trait FilterTrait
             case 'split':
                 $arga = $this->extractList($args);
                 $delimiter = $arga[0] ?? '';
-                $limit = (int) ($arga[1] ?? 1);
+                if (!isset($arga[1])) {
+                    return strlen($delimiter)
+                        ? explode($delimiter, $stringValue)
+                        : $stringValue;
+                }
+                $limit = (int) $arga[1];
                 return strlen($delimiter)
                     ? explode($delimiter, $stringValue, $limit)
                     : str_split($stringValue, $limit);
