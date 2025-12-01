@@ -22,6 +22,8 @@ $this->headLink()
 $this->headScript()
     ->appendFile($assetUrl('vendor/codemirror/lib/codemirror.js', 'Mapper'))
     ->appendFile($assetUrl('vendor/codemirror/addon/display/placeholder.js', 'Mapper'))
+    ->appendFile($assetUrl('vendor/codemirror/addon/edit/matchtags.js', 'DataTypeRdf'))
+    ->appendFile($assetUrl('vendor/codemirror/addon/fold/xml-fold.js', 'DataTypeRdf'))
     ->appendFile($assetUrl('vendor/codemirror/addon/hint/show-hint.js', 'Mapper'))
     ->appendFile($assetUrl('vendor/codemirror/addon/hint/xml-hint.js', 'Mapper'))
     ->appendFile($assetUrl('vendor/codemirror/mode/xml/xml.js', 'Mapper'))
@@ -43,5 +45,5 @@ $this->htmlElement('body')->appendAttribute('class', 'mapper show');
 
 <div id="mapper">
     <h2 class="label"><?= $escape($label) ?></h2>
-    <pre class="mapping-content" style="background: #f5f5f5; padding: 1em; overflow-x: auto; border: 1px solid #ddd; font-family: monospace; white-space: pre-wrap;"><?= $escape($content) ?></pre>
+    <textarea id="o-mapper-mapping" class="mapping-content"><?= $escape($content) ?></textarea>
 </div>
