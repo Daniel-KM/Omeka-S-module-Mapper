@@ -218,7 +218,7 @@ class MapperConfig
 
         // Generate name from content if not provided.
         if ($name === null && $mappingOrRef !== null) {
-            $name = md5(serialize($mappingOrRef));
+            $name = $this->generateNameFromReference($mappingOrRef);
         }
 
         $this->currentName = $name;
@@ -387,6 +387,24 @@ class MapperConfig
         }
 
         $this->mappings[$this->currentName] = $mapping;
+    }
+
+    /**
+     * Generate the default unique name from a mapping reference.
+     *
+     * Use the filename for file-based references or md5 hash for array content.
+     */
+    protected function generateNameFromReference($mappingOrRef): string
+    {
+        // For string references, use the reference itself as name.
+        // This covers file references like "module:xml/idref_personne.xml"
+        // and database references like "mapping:5".
+        if (is_string($mappingOrRef)) {
+            return $mappingOrRef;
+        }
+
+        // For array content, fall back to md5 hash.
+        return md5(serialize($mappingOrRef));
     }
 
     /**
