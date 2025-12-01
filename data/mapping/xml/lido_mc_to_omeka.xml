@@ -1,0 +1,695 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Alignement de LIDO-MC (Lightweight Information Describing Objects - Ministère de la Culture)
+    avec les vocabulaires Omeka S (dcterms, bibo, foaf, bio, curation).
+
+    LIDO-MC est le profil d'application français du standard international LIDO,
+    adopté par le Ministère de la Culture pour harmoniser les flux de données culturelles.
+
+    Références :
+    @link https://lido-schema.org/ - Standard LIDO international
+    @link https://lido-schema.org/documents/primer/latest/lido-primer.html - LIDO Primer
+    @link https://www.culture.gouv.fr/thematiques/innovation-numerique/faciliter-l-acces-aux-donnees-et-aux-contenus-culturels/partager-et-valoriser-les-donnees-et-les-contenus-culturels/partager-facilement-les-donnees-culturelles-avec-le-profil-d-application-lido-mc
+
+    Ontologies et vocabulaires utilisés par LIDO / LIDO-MC :
+    =========================================================
+    - dcterms  : Dublin Core Terms (http://purl.org/dc/terms/) - Titre, créateur, date, sujet, description, droits, format, identifiant
+    - dc       : Dublin Core Elements (http://purl.org/dc/elements/1.1/) - Éléments de base (rétrocompatibilité)
+    - skos     : SKOS (http://www.w3.org/2004/02/skos/core#) - Concepts (types d'objet, matériaux, techniques)
+    - rdf      : RDF (http://www.w3.org/1999/02/22-rdf-syntax-ns#) - Structure sémantique
+    - rdfs     : RDF Schema (http://www.w3.org/2000/01/rdf-schema#) - Labels, classes
+    - owl      : OWL (http://www.w3.org/2002/07/owl#) - Liens owl:sameAs vers autorités
+    - foaf     : FOAF (http://xmlns.com/foaf/0.1/) - Personnes, organisations (acteurs)
+    - crm      : CIDOC-CRM (http://www.cidoc-crm.org/cidoc-crm/) - Modèle conceptuel événementiel (E22 Man-Made Object, E5 Event, etc.)
+    - gml      : GML (http://www.opengis.net/gml) - Coordonnées géographiques
+    - bibo     : BIBO (http://purl.org/ontology/bibo/) - Identifiants (ISBN, DOI, etc.)
+    - edm      : Europeana Data Model (http://www.europeana.eu/schemas/edm/) - Interopérabilité Europeana
+
+    Thésauri et vocabulaires contrôlés référencés :
+    ================================================
+    - Getty AAT (Art & Architecture Thesaurus) : types d'objets, matériaux, techniques
+    - Getty ULAN : artistes et organisations
+    - Getty TGN : lieux géographiques
+    - Wikidata : identifiants universels
+    - VIAF : autorités internationales
+    - GND : autorités allemandes
+    - IdRef/Rameau : autorités françaises (pour LIDO-MC)
+    - LIDO Terminology : http://terminology.lido-schema.org
+
+    Namespace LIDO : http://www.lido-schema.org
+
+    @copyright Daniel Berthereau, 2026
+    @license CeCILL 2.1 https://cecill.info/licences/Licence_CeCILL_V2.1-fr.txt
+-->
+
+<mapping
+    xmlns:lido="http://www.lido-schema.org"
+    xmlns:gml="http://www.opengis.net/gml"
+    xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    >
+
+    <info>
+        <label>LIDO-MC to Omeka</label>
+        <from>lido-mc</from>
+        <to>resources</to>
+    </info>
+
+    <!-- ===================================================================== -->
+    <!-- Valeurs par défaut (sans <from>)                                      -->
+    <!-- ===================================================================== -->
+
+    <map>
+        <to field="resource_name"/>
+        <mod raw="o:Item"/>
+    </map>
+
+    <!-- ===================================================================== -->
+    <!-- IDENTIFIANTS                                                          -->
+    <!-- ===================================================================== -->
+
+    <!-- lidoRecID - Identifiant unique de l'enregistrement LIDO -->
+    <map>
+        <from xpath="//lido:lidoRecID"/>
+        <to field="dcterms:identifier"
+            datatype="literal"/>
+    </map>
+
+    <!-- objectPublishedID - Identifiant publié de l'objet -->
+    <map>
+        <from xpath="//lido:objectPublishedID"/>
+        <to field="dcterms:identifier"
+            datatype="uri literal"/>
+    </map>
+
+    <!-- workID - Numéro d'inventaire / cote -->
+    <map>
+        <from xpath="//lido:repositoryWrap/lido:repositorySet/lido:workID"/>
+        <to field="bibo:locator"
+            datatype="literal"/>
+    </map>
+
+    <!-- ===================================================================== -->
+    <!-- CLASSIFICATION DE L'OBJET (objectClassificationWrap)                  -->
+    <!-- ===================================================================== -->
+
+    <!-- objectWorkType - Type d'objet/œuvre (obligatoire dans LIDO) -->
+    <map>
+        <from xpath="//lido:objectClassificationWrap/lido:objectWorkTypeWrap/lido:objectWorkType/lido:term"/>
+        <to field="dcterms:type"
+            datatype="literal"/>
+    </map>
+
+    <!-- objectWorkType avec URI (skos:Concept) -->
+    <map>
+        <from xpath="//lido:objectClassificationWrap/lido:objectWorkTypeWrap/lido:objectWorkType/lido:conceptID"/>
+        <to field="dcterms:type"
+            datatype="uri"/>
+    </map>
+
+    <!-- classification - Classification complémentaire -->
+    <map>
+        <from xpath="//lido:objectClassificationWrap/lido:classificationWrap/lido:classification/lido:term"/>
+        <to field="dcterms:type"
+            datatype="literal"/>
+    </map>
+
+    <!-- category - Catégorie CIDOC-CRM (E22 Man-Made Object, etc.) -->
+    <map>
+        <from xpath="//lido:category/lido:term"/>
+        <to field="dcterms:type"
+            datatype="literal"/>
+        <mod prepend="Catégorie CIDOC-CRM : "/>
+    </map>
+
+    <!-- ===================================================================== -->
+    <!-- IDENTIFICATION DE L'OBJET (objectIdentificationWrap)                  -->
+    <!-- ===================================================================== -->
+
+    <!-- Titre principal -->
+    <map>
+        <from xpath="//lido:objectIdentificationWrap/lido:titleWrap/lido:titleSet/lido:appellationValue[@lido:pref='preferred' or not(@lido:pref)]"/>
+        <to field="dcterms:title"
+            datatype="literal"/>
+    </map>
+
+    <!-- Titres alternatifs -->
+    <map>
+        <from xpath="//lido:objectIdentificationWrap/lido:titleWrap/lido:titleSet/lido:appellationValue[@lido:pref='alternate']"/>
+        <to field="dcterms:alternative"
+            datatype="literal"/>
+    </map>
+
+    <!-- displayTitle - Titre d'affichage -->
+    <map>
+        <from xpath="//lido:objectIdentificationWrap/lido:titleWrap/lido:titleSet[@lido:type='displayTitle']/lido:appellationValue"/>
+        <to field="dcterms:title"
+            datatype="literal"/>
+    </map>
+
+    <!-- Inscriptions -->
+    <map>
+        <from xpath="//lido:objectIdentificationWrap/lido:inscriptionsWrap/lido:inscriptions/lido:inscriptionTranscription"/>
+        <to field="bibo:content"
+            datatype="literal"/>
+        <mod prepend="Inscription : "/>
+    </map>
+
+    <!-- Description des inscriptions -->
+    <map>
+        <from xpath="//lido:objectIdentificationWrap/lido:inscriptionsWrap/lido:inscriptions/lido:inscriptionDescription/lido:descriptiveNoteValue"/>
+        <to field="dcterms:description"
+            datatype="literal"/>
+    </map>
+
+    <!-- Établissement de conservation -->
+    <map>
+        <from xpath="//lido:objectIdentificationWrap/lido:repositoryWrap/lido:repositorySet/lido:repositoryName/lido:legalBodyName/lido:appellationValue"/>
+        <to field="dcterms:publisher"
+            datatype="literal"/>
+    </map>
+
+    <!-- Lieu de conservation -->
+    <map>
+        <from xpath="//lido:objectIdentificationWrap/lido:repositoryWrap/lido:repositorySet/lido:repositoryLocation/lido:namePlaceSet/lido:appellationValue"/>
+        <to field="dcterms:spatial"
+            datatype="literal"/>
+        <mod prepend="Lieu de conservation : "/>
+    </map>
+
+    <!-- État de l'objet -->
+    <map>
+        <from xpath="//lido:objectIdentificationWrap/lido:displayStateEditionWrap/lido:displayState"/>
+        <to field="dcterms:description"
+            datatype="literal"/>
+        <mod prepend="État : "/>
+    </map>
+
+    <!-- Édition -->
+    <map>
+        <from xpath="//lido:objectIdentificationWrap/lido:displayStateEditionWrap/lido:displayEdition"/>
+        <to field="bibo:edition"
+            datatype="literal"/>
+    </map>
+
+    <!-- Description de l'objet -->
+    <map>
+        <from xpath="//lido:objectIdentificationWrap/lido:objectDescriptionWrap/lido:objectDescriptionSet/lido:descriptiveNoteValue"/>
+        <to field="dcterms:description"
+            datatype="literal"/>
+    </map>
+
+    <!-- ===================================================================== -->
+    <!-- DIMENSIONS ET MESURES (objectMeasurementsWrap)                        -->
+    <!-- ===================================================================== -->
+
+    <!-- Dimensions - Affichage formaté -->
+    <map>
+        <from xpath="//lido:objectIdentificationWrap/lido:objectMeasurementsWrap/lido:objectMeasurementsSet/lido:displayObjectMeasurements"/>
+        <to field="dcterms:extent"
+            datatype="literal"/>
+    </map>
+
+    <!-- Dimensions structurées - Hauteur -->
+    <map>
+        <from xpath="//lido:objectMeasurementsSet/lido:objectMeasurements/lido:measurementsSet[lido:measurementType/lido:term[contains(., 'height') or contains(., 'hauteur')]]/lido:measurementValue"/>
+        <to field="dcterms:extent"
+            datatype="literal"/>
+        <mod prepend="Hauteur : " append=" {{//objectMeasurementsSet/objectMeasurements/measurementsSet[lido:measurementType/term[contains(., 'height') or contains(., 'hauteur')]]/measurementUnit/term}}"/>
+    </map>
+
+    <!-- Dimensions structurées - Largeur -->
+    <map>
+        <from xpath="//lido:objectMeasurementsSet/lido:objectMeasurements/lido:measurementsSet[lido:measurementType/lido:term[contains(., 'width') or contains(., 'largeur')]]/lido:measurementValue"/>
+        <to field="dcterms:extent"
+            datatype="literal"/>
+        <mod prepend="Largeur : " append=" {{//objectMeasurementsSet/objectMeasurements/measurementsSet[lido:measurementType/term[contains(., 'width') or contains(., 'largeur')]]/measurementUnit/term}}"/>
+    </map>
+
+    <!-- Dimensions structurées - Profondeur -->
+    <map>
+        <from xpath="//lido:objectMeasurementsSet/lido:objectMeasurements/lido:measurementsSet[lido:measurementType/lido:term[contains(., 'depth') or contains(., 'profondeur')]]/lido:measurementValue"/>
+        <to field="dcterms:extent"
+            datatype="literal"/>
+        <mod prepend="Profondeur : " append=" {{//objectMeasurementsSet/objectMeasurements/measurementsSet[lido:measurementType/term[contains(., 'depth') or contains(., 'profondeur')]]/measurementUnit/term}}"/>
+    </map>
+
+    <!-- Dimensions structurées - Poids -->
+    <map>
+        <from xpath="//lido:objectMeasurementsSet/lido:objectMeasurements/lido:measurementsSet[lido:measurementType/lido:term[contains(., 'weight') or contains(., 'poids')]]/lido:measurementValue"/>
+        <to field="dcterms:extent"
+            datatype="literal"/>
+        <mod prepend="Poids : " append=" {{//objectMeasurementsSet/objectMeasurements/measurementsSet[lido:measurementType/term[contains(., 'weight') or contains(., 'poids')]]/measurementUnit/term}}"/>
+    </map>
+
+    <!-- ===================================================================== -->
+    <!-- ÉVÉNEMENTS (eventWrap) - Modèle événementiel CIDOC-CRM                -->
+    <!-- ===================================================================== -->
+
+    <!-- ===== PRODUCTION / CRÉATION ===== -->
+
+    <!-- Créateur / Artiste - Nom -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event[lido:eventType/lido:term[contains(., 'Production') or contains(., 'production') or contains(., 'Creation') or contains(., 'création')]]/lido:eventActor/lido:actorInRole/lido:actor/lido:nameActorSet/lido:appellationValue[@lido:pref='preferred' or not(@lido:pref)]"/>
+        <to field="dcterms:creator"
+            datatype="literal"/>
+    </map>
+
+    <!-- Créateur - URI d'autorité (VIAF, Wikidata, IdRef, etc.) -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event[lido:eventType/lido:term[contains(., 'Production') or contains(., 'production') or contains(., 'Creation') or contains(., 'création')]]/lido:eventActor/lido:actorInRole/lido:actor/lido:actorID[@lido:type='uri' or @lido:type='URI' or contains(., 'http')]"/>
+        <to field="dcterms:creator"
+            datatype="uri"/>
+    </map>
+
+    <!-- Rôle du créateur -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event[lido:eventType/lido:term[contains(., 'Production') or contains(., 'production')]]/lido:eventActor/lido:actorInRole/lido:roleActor/lido:term"/>
+        <to field="dcterms:creator"
+            datatype="literal"/>
+        <mod prepend="Rôle : "/>
+    </map>
+
+    <!-- Attribution / École -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event[lido:eventType/lido:term[contains(., 'Production') or contains(., 'production')]]/lido:eventActor/lido:displayActorInRole"/>
+        <to field="dcterms:creator"
+            datatype="literal"/>
+    </map>
+
+    <!-- Date de création - Affichage -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event[lido:eventType/lido:term[contains(., 'Production') or contains(., 'production') or contains(., 'Creation') or contains(., 'création')]]/lido:eventDate/lido:displayDate"/>
+        <to field="dcterms:created"
+            datatype="literal"/>
+    </map>
+
+    <!-- Date de création - Début -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event[lido:eventType/lido:term[contains(., 'Production') or contains(., 'production') or contains(., 'Creation') or contains(., 'création')]]/lido:eventDate/lido:date/lido:earliestDate"/>
+        <to field="dcterms:created"
+            datatype="numeric:timestamp literal"/>
+    </map>
+
+    <!-- Date de création - Fin -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event[lido:eventType/lido:term[contains(., 'Production') or contains(., 'production') or contains(., 'Creation') or contains(., 'création')]]/lido:eventDate/lido:date/lido:latestDate"/>
+        <to field="dcterms:created"
+            datatype="numeric:timestamp literal"/>
+    </map>
+
+    <!-- Lieu de création -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event[lido:eventType/lido:term[contains(., 'Production') or contains(., 'production') or contains(., 'Creation') or contains(., 'création')]]/lido:eventPlace/lido:place/lido:namePlaceSet/lido:appellationValue"/>
+        <to field="dcterms:spatial"
+            datatype="literal"/>
+        <mod prepend="Lieu de création : "/>
+    </map>
+
+    <!-- Lieu de création - URI (Getty TGN, Wikidata, etc.) -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event[lido:eventType/lido:term[contains(., 'Production') or contains(., 'production')]]/lido:eventPlace/lido:place/lido:placeID[contains(., 'http')]"/>
+        <to field="dcterms:spatial"
+            datatype="uri"/>
+    </map>
+
+    <!-- Coordonnées géographiques (GML) -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event/lido:eventPlace/lido:place/gml:Point/gml:pos"/>
+        <to field="dcterms:spatial"
+            datatype="literal"/>
+        <mod prepend="Coordonnées : "/>
+    </map>
+
+    <!-- Culture -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event/lido:culture/lido:term"/>
+        <to field="dcterms:coverage"
+            datatype="literal"/>
+        <mod prepend="Culture : "/>
+    </map>
+
+    <!-- Période historique -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event/lido:periodName/lido:term"/>
+        <to field="dcterms:temporal"
+            datatype="literal"/>
+    </map>
+
+    <!-- Matériaux -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event/lido:eventMaterialsTech/lido:materialsTech/lido:termMaterialsTech[@lido:type='material']/lido:term"/>
+        <to field="dcterms:medium"
+            datatype="literal"/>
+    </map>
+
+    <!-- Techniques -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event/lido:eventMaterialsTech/lido:materialsTech/lido:termMaterialsTech[@lido:type='technique']/lido:term"/>
+        <to field="dcterms:medium"
+            datatype="literal"/>
+        <mod prepend="Technique : "/>
+    </map>
+
+    <!-- Matériaux/Techniques - Affichage global -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event/lido:eventMaterialsTech/lido:displayMaterialsTech"/>
+        <to field="dcterms:medium"
+            datatype="literal"/>
+    </map>
+
+    <!-- Méthode de production -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event/lido:eventMethod/lido:term"/>
+        <to field="dcterms:medium"
+            datatype="literal"/>
+        <mod prepend="Méthode : "/>
+    </map>
+
+    <!-- ===== DÉCOUVERTE / FOUILLES ===== -->
+
+    <!-- Date de découverte -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event[lido:eventType/lido:term[contains(., 'Finding') or contains(., 'découverte') or contains(., 'Excavation') or contains(., 'fouille')]]/lido:eventDate/lido:displayDate"/>
+        <to field="dcterms:date"
+            datatype="literal"/>
+        <mod prepend="Date de découverte : "/>
+    </map>
+
+    <!-- Lieu de découverte -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event[lido:eventType/lido:term[contains(., 'Finding') or contains(., 'découverte') or contains(., 'Excavation') or contains(., 'fouille')]]/lido:eventPlace/lido:displayPlace"/>
+        <to field="dcterms:spatial"
+            datatype="literal"/>
+        <mod prepend="Lieu de découverte : "/>
+    </map>
+
+    <!-- ===== ACQUISITION ===== -->
+
+    <!-- Date d'acquisition -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event[lido:eventType/lido:term[contains(., 'Acquisition') or contains(., 'acquisition')]]/lido:eventDate/lido:displayDate"/>
+        <to field="dcterms:provenance"
+            datatype="literal"/>
+        <mod prepend="Acquisition : "/>
+    </map>
+
+    <!-- Mode d'acquisition -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event[lido:eventType/lido:term[contains(., 'Acquisition') or contains(., 'acquisition')]]/lido:eventMethod/lido:term"/>
+        <to field="dcterms:provenance"
+            datatype="literal"/>
+        <mod prepend="Mode d'acquisition : "/>
+    </map>
+
+    <!-- ===== EXPOSITION ===== -->
+
+    <!-- Expositions -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event[lido:eventType/lido:term[contains(., 'Exhibition') or contains(., 'exposition')]]/lido:eventName/lido:appellationValue"/>
+        <to field="dcterms:provenance"
+            datatype="literal"/>
+        <mod prepend="Exposition : "/>
+    </map>
+
+    <!-- ===== RESTAURATION ===== -->
+
+    <!-- Restauration -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event[lido:eventType/lido:term[contains(., 'Restoration') or contains(., 'restauration')]]/lido:eventDate/lido:displayDate"/>
+        <to field="dcterms:provenance"
+            datatype="literal"/>
+        <mod prepend="Restauration : "/>
+    </map>
+
+    <!-- ===== ÉVÉNEMENT GÉNÉRIQUE ===== -->
+
+    <!-- Description d'événement -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:event/lido:eventDescriptionSet/lido:descriptiveNoteValue"/>
+        <to field="dcterms:description"
+            datatype="literal"/>
+    </map>
+
+    <!-- Événement affiché -->
+    <map>
+        <from xpath="//lido:eventWrap/lido:eventSet/lido:displayEvent"/>
+        <to field="dcterms:description"
+            datatype="literal"/>
+    </map>
+
+    <!-- ===================================================================== -->
+    <!-- RELATIONS (objectRelationWrap)                                        -->
+    <!-- ===================================================================== -->
+
+    <!-- ===== SUJETS ===== -->
+
+    <!-- Sujet - Concept/Thème -->
+    <map>
+        <from xpath="//lido:objectRelationWrap/lido:subjectWrap/lido:subjectSet/lido:subject/lido:subjectConcept/lido:term"/>
+        <to field="dcterms:subject"
+            datatype="literal"/>
+    </map>
+
+    <!-- Sujet - URI de concept (AAT, Rameau, etc.) -->
+    <map>
+        <from xpath="//lido:objectRelationWrap/lido:subjectWrap/lido:subjectSet/lido:subject/lido:subjectConcept/lido:conceptID[contains(., 'http')]"/>
+        <to field="dcterms:subject"
+            datatype="uri"/>
+    </map>
+
+    <!-- Sujet - Acteur représenté -->
+    <map>
+        <from xpath="//lido:objectRelationWrap/lido:subjectWrap/lido:subjectSet/lido:subject/lido:subjectActor/lido:actor/lido:nameActorSet/lido:appellationValue"/>
+        <to field="dcterms:subject"
+            datatype="literal"/>
+        <mod prepend="Personne représentée : "/>
+    </map>
+
+    <!-- Sujet - Lieu représenté -->
+    <map>
+        <from xpath="//lido:objectRelationWrap/lido:subjectWrap/lido:subjectSet/lido:subject/lido:subjectPlace/lido:place/lido:namePlaceSet/lido:appellationValue"/>
+        <to field="dcterms:subject"
+            datatype="literal"/>
+        <mod prepend="Lieu représenté : "/>
+    </map>
+
+    <!-- Sujet - Événement représenté -->
+    <map>
+        <from xpath="//lido:objectRelationWrap/lido:subjectWrap/lido:subjectSet/lido:subject/lido:subjectEvent/lido:event/lido:eventName/lido:appellationValue"/>
+        <to field="dcterms:subject"
+            datatype="literal"/>
+        <mod prepend="Événement représenté : "/>
+    </map>
+
+    <!-- Sujet - Date représentée -->
+    <map>
+        <from xpath="//lido:objectRelationWrap/lido:subjectWrap/lido:subjectSet/lido:subject/lido:subjectDate/lido:displayDate"/>
+        <to field="dcterms:subject"
+            datatype="literal"/>
+        <mod prepend="Date représentée : "/>
+    </map>
+
+    <!-- Sujet - Objet représenté -->
+    <map>
+        <from xpath="//lido:objectRelationWrap/lido:subjectWrap/lido:subjectSet/lido:subject/lido:subjectObject/lido:object/lido:objectNote"/>
+        <to field="dcterms:subject"
+            datatype="literal"/>
+    </map>
+
+    <!-- Sujet affiché -->
+    <map>
+        <from xpath="//lido:objectRelationWrap/lido:subjectWrap/lido:subjectSet/lido:displaySubject"/>
+        <to field="dcterms:subject"
+            datatype="literal"/>
+    </map>
+
+    <!-- ===== ŒUVRES LIÉES ===== -->
+
+    <!-- Œuvre liée -->
+    <map>
+        <from xpath="//lido:objectRelationWrap/lido:relatedWorksWrap/lido:relatedWorkSet/lido:relatedWork/lido:object/lido:objectNote"/>
+        <to field="dcterms:relation"
+            datatype="literal"/>
+    </map>
+
+    <!-- Œuvre liée - Identifiant -->
+    <map>
+        <from xpath="//lido:objectRelationWrap/lido:relatedWorksWrap/lido:relatedWorkSet/lido:relatedWork/lido:object/lido:objectID[contains(., 'http')]"/>
+        <to field="dcterms:relation"
+            datatype="uri"/>
+    </map>
+
+    <!-- Type de relation -->
+    <map>
+        <from xpath="//lido:objectRelationWrap/lido:relatedWorksWrap/lido:relatedWorkSet/lido:relatedWorkRelType/lido:term"/>
+        <to field="dcterms:relation"
+            datatype="literal"/>
+        <mod prepend="Type de relation : "/>
+    </map>
+
+    <!-- ===================================================================== -->
+    <!-- DROITS (rightsWorkWrap)                                               -->
+    <!-- ===================================================================== -->
+
+    <!-- Type de droits -->
+    <map>
+        <from xpath="//lido:administrativeMetadata/lido:rightsWorkWrap/lido:rightsWorkSet/lido:rightsType/lido:term"/>
+        <to field="dcterms:rights"
+            datatype="literal"/>
+    </map>
+
+    <!-- URI de licence -->
+    <map>
+        <from xpath="//lido:administrativeMetadata/lido:rightsWorkWrap/lido:rightsWorkSet/lido:rightsType/lido:conceptID[contains(., 'http')]"/>
+        <to field="dcterms:rights"
+            datatype="uri"/>
+    </map>
+
+    <!-- Date des droits -->
+    <map>
+        <from xpath="//lido:administrativeMetadata/lido:rightsWorkWrap/lido:rightsWorkSet/lido:rightsDate/lido:displayDate"/>
+        <to field="dcterms:rights"
+            datatype="literal"/>
+        <mod prepend="Date des droits : "/>
+    </map>
+
+    <!-- Titulaire des droits -->
+    <map>
+        <from xpath="//lido:administrativeMetadata/lido:rightsWorkWrap/lido:rightsWorkSet/lido:rightsHolder/lido:legalBodyName/lido:appellationValue"/>
+        <to field="dcterms:rightsHolder"
+            datatype="literal"/>
+    </map>
+
+    <!-- Mention de crédit -->
+    <map>
+        <from xpath="//lido:administrativeMetadata/lido:rightsWorkWrap/lido:rightsWorkSet/lido:creditLine"/>
+        <to field="dcterms:rights"
+            datatype="literal"/>
+        <mod prepend="Crédit : "/>
+    </map>
+
+    <!-- ===================================================================== -->
+    <!-- ENREGISTREMENT (recordWrap)                                           -->
+    <!-- ===================================================================== -->
+
+    <!-- Identifiant de notice -->
+    <map>
+        <from xpath="//lido:administrativeMetadata/lido:recordWrap/lido:recordID"/>
+        <to field="dcterms:identifier"
+            datatype="literal"
+            visibility="private"/>
+        <mod prepend="Notice : "/>
+    </map>
+
+    <!-- Type d'enregistrement -->
+    <map>
+        <from xpath="//lido:administrativeMetadata/lido:recordWrap/lido:recordType/lido:term"/>
+        <to field="dcterms:type"
+            datatype="literal"
+            visibility="private"/>
+    </map>
+
+    <!-- Source de la notice -->
+    <map>
+        <from xpath="//lido:administrativeMetadata/lido:recordWrap/lido:recordSource/lido:legalBodyName/lido:appellationValue"/>
+        <to field="dcterms:source"
+            datatype="literal"/>
+    </map>
+
+    <!-- URI de la source -->
+    <map>
+        <from xpath="//lido:administrativeMetadata/lido:recordWrap/lido:recordSource/lido:legalBodyWeblink"/>
+        <to field="dcterms:source"
+            datatype="uri"/>
+    </map>
+
+    <!-- Date de création de la notice -->
+    <map>
+        <from xpath="//lido:administrativeMetadata/lido:recordWrap/lido:recordInfoSet/lido:recordInfoLink"/>
+        <to field="dcterms:source"
+            datatype="uri"/>
+    </map>
+
+    <!-- Métadonnées de la notice -->
+    <map>
+        <from xpath="//lido:administrativeMetadata/lido:recordWrap/lido:recordInfoSet/lido:recordMetadataDate"/>
+        <to field="modified"/>
+        <mod pattern="{{ value|dateSql }}"/>
+    </map>
+
+    <!-- ===================================================================== -->
+    <!-- RESSOURCES NUMÉRIQUES (resourceWrap) - Médias                         -->
+    <!-- ===================================================================== -->
+
+    <!-- Image / Fichier - URL -->
+    <map>
+        <from xpath="//lido:administrativeMetadata/lido:resourceWrap/lido:resourceSet/lido:resourceRepresentation/lido:linkResource"/>
+        <to field="file"/>
+    </map>
+
+    <!-- Type de ressource -->
+    <map>
+        <from xpath="//lido:administrativeMetadata/lido:resourceWrap/lido:resourceSet/lido:resourceType/lido:term"/>
+        <to field="dcterms:format"
+            datatype="literal"
+            visibility="private"/>
+    </map>
+
+    <!-- Description de la ressource -->
+    <map>
+        <from xpath="//lido:administrativeMetadata/lido:resourceWrap/lido:resourceSet/lido:resourceDescription"/>
+        <to field="dcterms:description"
+            datatype="literal"
+            visibility="private"/>
+        <mod prepend="Image : "/>
+    </map>
+
+    <!-- Date de prise de vue -->
+    <map>
+        <from xpath="//lido:administrativeMetadata/lido:resourceWrap/lido:resourceSet/lido:resourceDateTaken/lido:displayDate"/>
+        <to field="dcterms:date"
+            datatype="literal"
+            visibility="private"/>
+        <mod prepend="Prise de vue : "/>
+    </map>
+
+    <!-- Source de la ressource -->
+    <map>
+        <from xpath="//lido:administrativeMetadata/lido:resourceWrap/lido:resourceSet/lido:resourceSource/lido:legalBodyName/lido:appellationValue"/>
+        <to field="dcterms:source"
+            datatype="literal"
+            visibility="private"/>
+        <mod prepend="Photographe/Source : "/>
+    </map>
+
+    <!-- Droits sur la ressource -->
+    <map>
+        <from xpath="//lido:administrativeMetadata/lido:resourceWrap/lido:resourceSet/lido:rightsResource/lido:rightsType/lido:term"/>
+        <to field="dcterms:rights"
+            datatype="literal"
+            visibility="private"/>
+        <mod prepend="Droits image : "/>
+    </map>
+
+    <!-- ===================================================================== -->
+    <!-- MÉTADONNÉES SUPPLÉMENTAIRES LIDO-MC                                   -->
+    <!-- ===================================================================== -->
+
+    <!-- Langue des métadonnées -->
+    <map>
+        <from xpath="//lido:lido/lido:descriptiveMetadata/@xml:lang"/>
+        <to field="dcterms:language"
+            datatype="literal"
+            visibility="private"/>
+    </map>
+
+    <!-- Profil d'application -->
+    <map>
+        <from xpath="//lido:lido/lido:applicationProfile"/>
+        <to field="dcterms:conformsTo"
+            datatype="literal"
+            visibility="private"/>
+    </map>
+
+</mapping>
