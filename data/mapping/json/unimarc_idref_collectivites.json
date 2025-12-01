@@ -1,0 +1,183 @@
+{
+  "Collectivité": [
+    {
+      "from": {
+        "type": "static"
+      },
+      "to": {
+        "type": "static",
+        "data": {
+          "o:resource_class": {
+            "o:term": "foaf:Organization",
+            "o:id": 96
+          },
+          "o:resource_template": {
+            "o:label": "Collectivité"
+          }
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "xpath",
+        "path": "/record/datafield[@tag='101']/subfield[@code='a'][1]"
+      },
+      "to": {
+        "type": "property",
+        "format": "concat",
+        "args": {
+          "0": "http://id.loc.gov/vocabulary/iso639-2/",
+          "1": "__value__"
+        },
+        "data": {
+          "property": "dcterms:language",
+          "property_id": 12,
+          "type": "valuesuggest:lc:iso6392"
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "todo",
+        "path": ""
+      },
+      "to": {
+        "type": "property",
+        "data": {
+          "property": "dcterms:alternative",
+          "property_id": 17
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "todo",
+        "path": "",
+        "#": "choisir une ou plusieurs zones 300/303/317... ?"
+      },
+      "to": {
+        "type": "property",
+        "data": {
+          "property": "dcterms:bibliographicCitation",
+          "property_id": 48
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "todo",
+        "path": "",
+        "#": "Plateforme source"
+      },
+      "to": {
+        "type": "property",
+        "data": {
+          "property": "dcterms:provenance",
+          "property_id": 51
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "xpath",
+        "path": "/record/controlfield[@tag='003']",
+        "#": "= type data : path b"
+      },
+      "to": {
+        "type": "property",
+        "data": {
+          "property": "bibo:identifier",
+          "property_id": 98,
+          "type": "valuesuggest:idref:corporation"
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "todo",
+        "path": ""
+      },
+      "to": {
+        "type": "property",
+        "data": {
+          "property": "bibo:uri",
+          "property_id": 121,
+          "type": "uri"
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "data",
+        "path": "e",
+        "#": "= /record/datafield[@tag='900']/subfield[@code='a']"
+      },
+      "to": {
+        "type": "property",
+        "data": {
+          "property": "foaf:name",
+          "property_id": 138
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "xpath",
+        "path": "/record/datafield[@tag='340']/subfield[@code='a'][1]",
+        "#": "Ou 300 ?"
+      },
+      "to": {
+        "type": "property",
+        "data": {
+          "property": "bio:biography",
+          "property_id": 188
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "xpath",
+        "path": "/record/datafield[@tag='102']/subfield[@code='a'][1]"
+      },
+      "to": {
+        "type": "property",
+        "format": "code_to_geonames",
+        "data": {
+          "property": "bio:place",
+          "property_id": 190,
+          "type": "valuesuggest:geonames:geonames"
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "xpath",
+        "path": "/record/datafield[@tag='103']/subfield[@code='a'][1]"
+      },
+      "to": {
+        "type": "property",
+        "format": "number_to_date",
+        "data": {
+          "property": "bio:birth",
+          "property_id": 214,
+          "type": "numeric:timestamp"
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "xpath",
+        "path": "/record/datafield[@tag='103']/subfield[@code='b'][1]"
+      },
+      "to": {
+        "type": "property",
+        "format": "number_to_date",
+        "data": {
+          "property": "bio:death",
+          "property_id": 215,
+          "type": "numeric:timestamp"
+        }
+      }
+    }
+  ]
+}

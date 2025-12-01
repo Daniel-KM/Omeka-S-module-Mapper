@@ -1,0 +1,257 @@
+{
+  "Personne": [
+    {
+      "from": {
+        "type": "static"
+      },
+      "to": {
+        "type": "static",
+        "data": {
+          "o:resource_class": {
+            "o:term": "foaf:Person",
+            "o:id": 94
+          },
+          "o:resource_template": {
+            "o:label": "Personne"
+          }
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "data",
+        "path": "e",
+        "#": "= /record/datafield[@tag='900']/subfield[@code='a']"
+      },
+      "to": {
+        "type": "property",
+        "data": {
+          "property": "foaf:name",
+          "property_id": 138
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "data",
+        "path": "c",
+        "#": "= /record/datafield[@tag='200']/subfield[@code='a']"
+      },
+      "to": {
+        "type": "property",
+        "data": {
+          "property": "foaf:familyName",
+          "property_id": 145
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "todo",
+        "path": ""
+      },
+      "to": {
+        "type": "property",
+        "data": {
+          "property": "dcterms:alternative",
+          "property_id": 17
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "data",
+        "path": "d",
+        "#": "= /record/datafield[@tag='200']/subfield[@code='b']"
+      },
+      "to": {
+        "type": "property",
+        "data": {
+          "property": "foaf:givenName",
+          "property_id": 141
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "xpath",
+        "path": "/record/datafield[@tag='103']/subfield[@code='a'][1]"
+      },
+      "to": {
+        "type": "property",
+        "format": "number_to_date",
+        "data": {
+          "property": "bio:birth",
+          "property_id": 214,
+          "type": "numeric:timestamp"
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "xpath",
+        "path": "/record/datafield[@tag='103']/subfield[@code='b'][1]"
+      },
+      "to": {
+        "type": "property",
+        "format": "number_to_date",
+        "data": {
+          "property": "bio:death",
+          "property_id": 215,
+          "type": "numeric:timestamp"
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "todo",
+        "path": ""
+      },
+      "to": {
+        "type": "property",
+        "format": "table",
+        "args": {
+          "0": "Féminin",
+          "1": "Masculin"
+        },
+        "data": {
+          "property": "bio:gender",
+          "property_id": 215,
+          "type": "customvocab:2"
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "xpath",
+        "path": "/record/datafield[@tag='101']/subfield[@code='a'][1]"
+      },
+      "to": {
+        "type": "property",
+        "format": "concat",
+        "args": {
+          "0": "http://id.loc.gov/vocabulary/iso639-2/",
+          "1": "__value__"
+        },
+        "data": {
+          "property": "dcterms:language",
+          "property_id": 12,
+          "type": "valuesuggest:lc:iso6392"
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "xpath",
+        "path": "/record/datafield[@tag='102']/subfield[@code='a'][1]"
+      },
+      "to": {
+        "type": "property",
+        "format": "code_to_geonames",
+        "data": {
+          "property": "bio:place",
+          "property_id": 190,
+          "type": "valuesuggest:geonames:geonames"
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "xpath",
+        "path": "/record/datafield[@tag='200']/subfield[@code='c'][1]"
+      },
+      "to": {
+        "type": "property",
+        "data": {
+          "property": "bio:position",
+          "property_id": 191
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "xpath",
+        "path": "/record/datafield[@tag='340']/subfield[@code='a'][1]",
+        "#": "Ou 300 ?"
+      },
+      "to": {
+        "type": "property",
+        "data": {
+          "property": "bio:biography",
+          "property_id": 188
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "todo",
+        "path": "",
+        "#": "choisir une ou plusieurs zones 300/303/317... ?"
+      },
+      "to": {
+        "type": "property",
+        "data": {
+          "property": "dcterms:bibliographicCitation",
+          "property_id": 48
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "xpath",
+        "path": "/record/controlfield[@tag='003']",
+        "#": "= type data : path b"
+      },
+      "to": {
+        "type": "property",
+        "data": {
+          "property": "bibo:identifier",
+          "property_id": 98,
+          "type": "valuesuggest:idref:person"
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "noop",
+        "#": "url manioc"
+      },
+      "to": {
+        "type": "property",
+        "data": {
+          "property": "dcterms:relation",
+          "property_id": 13,
+          "type": "uri"
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "todo",
+        "path": "",
+        "#": "Plateforme source"
+      },
+      "to": {
+        "type": "property",
+        "data": {
+          "property": "dcterms:provenance",
+          "property_id": 51
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "todo",
+        "path": ""
+      },
+      "to": {
+        "type": "property",
+        "data": {
+          "property": "bibo:uri",
+          "property_id": 121,
+          "type": "uri"
+        }
+      }
+    }
+  ]
+}

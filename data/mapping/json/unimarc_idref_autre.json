@@ -1,0 +1,68 @@
+{
+  "Autre": [
+    {
+      "from": {
+        "type": "data",
+        "path": "e"
+      },
+      "to": {
+        "type": "property",
+        "data": {
+          "property": "dcterms:title",
+          "property_id": 1
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "data",
+        "path": "c"
+      },
+      "to": {
+        "type": "property",
+        "data": {
+          "property": "dcterms:alternative",
+          "property_id": 17
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "data",
+        "path": "b"
+      },
+      "to": {
+        "type": "property",
+        "format": "concat",
+        "args": {
+          "0": "https://www.idref.fr/",
+          "1": "__value__"
+        },
+        "data": {
+          "property": "bibo:identifier",
+          "property_id": 98,
+          "type": "uri"
+        }
+      }
+    },
+    {
+      "from": {
+        "type": "xpath",
+        "path": "/record/datafield[@tag='101']/subfield[@code='a'][1]"
+      },
+      "to": {
+        "type": "property",
+        "format": "concat",
+        "args": {
+          "0": "http://id.loc.gov/vocabulary/iso639-2/",
+          "1": "__value__"
+        },
+        "data": {
+          "property": "dcterms:language",
+          "property_id": 12,
+          "type": "valuesuggest:lc:iso6392"
+        }
+      }
+    }
+  ]
+}
