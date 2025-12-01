@@ -409,6 +409,8 @@ class MapperConfig
 
     /**
      * Load mapping content from a reference (file path, database ID, etc.).
+     *
+     * Also supports passing raw content (INI or XML) directly.
      */
     protected function loadMappingContent(string $reference): ?string
     {
@@ -429,20 +431,36 @@ class MapperConfig
             'module' => dirname(__DIR__, 2) . '/data/mapping/',
         ];
 
+        // Check if reference is a file path with known prefix.
+        $isFileReference = false;
         if (strpos($reference, ':') !== false) {
             $prefix = strtok($reference, ':');
-            $file = mb_substr($reference, strlen($prefix) + 1);
-        } else {
-            // Default to module prefix.
-            $prefix = 'module';
-            $file = $reference;
+            if (isset($prefixes[$prefix])) {
+                $isFileReference = true;
+                $file = mb_substr($reference, strlen($prefix) + 1);
+                $filepath = $prefixes[$prefix] . $file;
+                if (file_exists($filepath) && is_readable($filepath)) {
+                    return trim((string) file_get_contents($filepath));
+                }
+                return null;
+            }
         }
 
-        if (!isset($prefixes[$prefix])) {
-            return null;
+        // Not a file reference - check if it looks like raw content (INI or XML).
+        // XML starts with '<', INI usually contains '[' section markers or '=' assignments.
+        $trimmed = trim($reference);
+        if (strlen($trimmed) > 10 && (
+            mb_substr($trimmed, 0, 1) === '<' ||
+            mb_substr($trimmed, 0, 1) === '[' ||
+            strpos($trimmed, ' = ') !== false ||
+            strpos($trimmed, "\n") !== false
+        )) {
+            // Looks like raw content, return as-is.
+            return $trimmed;
         }
 
-        $filepath = $prefixes[$prefix] . $file;
+        // Try as module file reference without prefix.
+        $filepath = $prefixes['module'] . $reference;
         if (file_exists($filepath) && is_readable($filepath)) {
             return trim((string) file_get_contents($filepath));
         }
