@@ -202,12 +202,12 @@ class Mapper
 
         $result = [];
 
+        // All maps (including former "default" maps) are now in the 'maps' section.
+        // Default maps are detected automatically by the absence of a source path.
         if (is_array($data)) {
-            $result = $this->convertSectionArray('default', $result, $data, true);
-            $result = $this->convertSectionArray('maps', $result, $data, false);
+            $result = $this->convertSectionArray('maps', $result, $data);
         } elseif ($data instanceof SimpleXMLElement) {
-            $result = $this->convertSectionXml('default', $result, $data, true);
-            $result = $this->convertSectionXml('maps', $result, $data, false);
+            $result = $this->convertSectionXml('maps', $result, $data);
         }
 
         return $result;
@@ -317,10 +317,10 @@ class Mapper
      * This method should be used when a mapping source ("from") is used
      * multiple times.
      *
-     * @param bool $isDefault When true, the target value "to" is added to the
-     *   vresource without using data.
+     * Maps without a source path (from.path) are treated as "default" maps
+     * and are applied without extracting data from the source.
      */
-    protected function convertSectionArray(string $section, array $resource, ?array $data, bool $isDefault): array
+    protected function convertSectionArray(string $section, array $resource, ?array $data): array
     {
         $maps = $this->mapperConfig->getSection($section);
         if (empty($maps)) {
@@ -354,8 +354,8 @@ class Mapper
             $append = $mod['append'] ?? '';
             $val = $mod['val'] ?? '';
 
-            // Default section - no source path needed.
-            if ($isDefault) {
+            // Default map - no source path, apply without extracting data.
+            if (empty($fromPath)) {
                 $this->setVariable('value', null);
                 $converted = $this->convertTargetToStringArray($from, $mod, null, $querier);
                 if ($converted === null || $converted === '') {
@@ -363,11 +363,6 @@ class Mapper
                 }
                 $result = strlen($val) ? $val : $prepend . $converted . $append;
                 $this->finalizeConversion($resource, $to, [$result]);
-                continue;
-            }
-
-            // Maps section - extract values from source.
-            if ($fromPath === null) {
                 continue;
             }
 
@@ -417,10 +412,10 @@ class Mapper
      * This method should be used when a mapping source ("from") is used
      * multiple times.
      *
-     * @param bool $isDefault When true, the target value "to" is added to the
-     *   resource without using data.
+     * Maps without a source path (from.path) are treated as "default" maps
+     * and are applied without extracting data from the source.
      */
-    protected function convertSectionXml(string $section, array $resource, SimpleXMLElement $xml, bool $isDefault): array
+    protected function convertSectionXml(string $section, array $resource, SimpleXMLElement $xml): array
     {
         $maps = $this->mapperConfig->getSection($section);
         if (empty($maps)) {
@@ -457,8 +452,8 @@ class Mapper
             $append = $mod['append'] ?? '';
             $val = $mod['val'] ?? '';
 
-            // Default section - no source path needed.
-            if ($isDefault) {
+            // Default map - no source path, apply without extracting data.
+            if (empty($fromPath)) {
                 $this->setVariable('value', null);
                 $converted = $this->convertTargetToStringXml($from, $mod, null, null, $outputAsXml);
                 if ($converted === null || $converted === '') {
@@ -466,11 +461,6 @@ class Mapper
                 }
                 $result = strlen($val) ? $val : $prepend . $converted . $append;
                 $this->finalizeConversion($resource, $to, [$result]);
-                continue;
-            }
-
-            // Maps section - extract values from source.
-            if (!$fromPath) {
                 continue;
             }
 

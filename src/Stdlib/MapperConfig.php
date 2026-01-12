@@ -70,12 +70,18 @@ class MapperConfig
     /**
      * Default maps section: maps applied when creating any resource.
      * Contains an array of map definitions (without source paths).
+     *
+     * @deprecated Use maps section instead. Default maps are now detected
+     *             automatically by the absence of a source path (from.path).
+     *             This section is kept for backward compatibility and will
+     *             be merged into maps during normalization.
      */
     public const SECTION_DEFAULT = 'default';
 
     /**
      * Maps section: the actual mapping rules.
-     * Contains an array of map definitions (with source paths).
+     * Contains an array of map definitions. Maps without a source path
+     * (from.path) are treated as "default" maps and always applied.
      */
     public const SECTION_MAPS = 'maps';
 
@@ -495,9 +501,40 @@ class MapperConfig
             return self::EMPTY_MAPPING;
         }
 
-        return mb_substr($content, 0, 1) === '<'
+        $mapping = mb_substr($content, 0, 1) === '<'
             ? $this->parseXml($content, $options)
             : $this->parseIni($content, $options);
+
+        return $this->finalizeMapping($mapping);
+    }
+
+    /**
+     * Finalize a mapping by merging deprecated sections and normalizing structure.
+     *
+     * This method:
+     * - Merges 'default' section into 'maps' (default is deprecated)
+     * - Logs a deprecation warning if 'default' section was used
+     */
+    protected function finalizeMapping(array $mapping): array
+    {
+        // Merge 'default' section into 'maps'.
+        if (!empty($mapping[self::SECTION_DEFAULT])) {
+            // Log deprecation warning for user awareness.
+            $this->logger->notice(
+                'Mapping "{name}": The [default] section is deprecated. Move its content to [maps] section. Maps without a source path are automatically treated as default maps.', // @translate
+                ['name' => $this->currentName ?? 'unknown']
+            );
+
+            // Prepend default maps to maps section (default maps should be processed first).
+            $mapping[self::SECTION_MAPS] = array_merge(
+                $mapping[self::SECTION_DEFAULT],
+                $mapping[self::SECTION_MAPS] ?? []
+            );
+            // Clear the default section (keep empty array for structure).
+            $mapping[self::SECTION_DEFAULT] = [];
+        }
+
+        return $mapping;
     }
 
     /**
@@ -845,7 +882,7 @@ class MapperConfig
             }
         }
 
-        return $mapping;
+        return $this->finalizeMapping($mapping);
     }
 
     /**
@@ -860,6 +897,7 @@ class MapperConfig
         $options['section'] = self::SECTION_MAPS;
         $mapping[self::SECTION_MAPS] = $this->normalizeMaps($maps, $options);
 
+        // No finalize needed here - parseMapList only creates maps section.
         return $mapping;
     }
 
