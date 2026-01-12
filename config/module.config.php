@@ -164,5 +164,6 @@ return [
         ],
     ],
     'mapper' => [
+        'field_automap' => require dirname(__DIR__) . '/data/mapping/automap.php',
     ],
 ];
