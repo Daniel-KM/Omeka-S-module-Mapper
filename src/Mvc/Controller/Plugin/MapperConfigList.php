@@ -138,9 +138,14 @@ class MapperConfigList extends AbstractPlugin
                 ['unimarc' => 'xml'],
                 // JSON format mappings (for IdRef).
                 ['idref' => 'json'],
-                // XSL transformations.
-                ['xsl' => 'xsl'],
-                ['xsl' => 'xml'],
+                // XSL transformations (in their respective folders).
+                ['common' => 'xsl'],
+                ['ead' => 'xsl'],
+                ['lido' => 'xsl'],
+                ['mets' => 'xsl'],
+                ['mods' => 'xsl'],
+                ['sru' => 'xsl'],
+                ['unimarc' => 'xsl'],
             ])['module']['options'];
         }
 

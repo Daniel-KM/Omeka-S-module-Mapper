@@ -12,7 +12,7 @@
  * ### Level 1: Mapping Sections (top-level structure)
  *
  * ```
- * [info]      → Metadata: label, from, to, querier, mapper, example
+ * [info]      → Metadata: label, from, to, querier, mapper, preprocess, example
  * [params]    → Configuration parameters (key-value pairs)
  * [default]   → Default maps applied to all resources
  * [maps]      → Actual mapping rules (array of maps)
@@ -56,8 +56,10 @@ class MapperConfig
     // =========================================================================
 
     /**
-     * Metadata section: label, from, to, querier, mapper, example.
+     * Metadata section: label, from, to, querier, mapper, preprocess, example.
      * Stores key-value pairs describing the mapping.
+     * The 'preprocess' key is an array of transformation files (XSL, JQ, etc.)
+     * to apply before mapping. The type is determined by file extension.
      */
     public const SECTION_INFO = 'info';
 
@@ -248,6 +250,7 @@ class MapperConfig
             'to' => null,
             'querier' => null,
             'mapper' => null,
+            'preprocess' => [],
             'example' => null,
         ],
         self::SECTION_PARAMS => [],
@@ -1256,9 +1259,16 @@ class MapperConfig
 
             if (in_array($section, self::KEYVALUE_SECTIONS)) {
                 if (isset($map[self::MAP_FROM]) && is_scalar($map[self::MAP_FROM])) {
-                    $mapping[$section][$map[self::MAP_FROM]] = $map[self::MAP_TO];
+                    $key = $map[self::MAP_FROM];
+                    // Handle array notation: key[] = value
+                    if (mb_substr($key, -2) === '[]') {
+                        $key = mb_substr($key, 0, -2);
+                        $mapping[$section][$key][] = $map[self::MAP_TO];
+                    } else {
+                        $mapping[$section][$key] = $map[self::MAP_TO];
+                    }
                     // Capture querier for later use.
-                    if ($section === self::SECTION_INFO && $map[self::MAP_FROM] === 'querier') {
+                    if ($section === self::SECTION_INFO && $key === 'querier') {
                         $defaultQuerier = $map[self::MAP_TO];
                     }
                 }
@@ -1459,7 +1469,13 @@ class MapperConfig
 
         if (isset($xml->info)) {
             foreach ($xml->info->children() as $element) {
-                $mapping['info'][$element->getName()] = (string) $element;
+                $name = $element->getName();
+                // Handle repeatable elements as arrays.
+                if ($name === 'preprocess') {
+                    $mapping['info']['preprocess'][] = (string) $element;
+                } else {
+                    $mapping['info'][$name] = (string) $element;
+                }
             }
         }
 
@@ -1611,10 +1627,18 @@ class MapperConfig
 
         // Info section is optional (consistent with INI and XML formats).
         if (isset($input['info']) && is_array($input['info'])) {
+            // Scalar info keys.
             foreach (['label', 'from', 'to', 'querier', 'mapper', 'example'] as $key) {
                 if (!empty($input['info'][$key]) && is_string($input['info'][$key])) {
                     $mapping['info'][$key] = $input['info'][$key];
                 }
+            }
+            // Array info keys.
+            if (!empty($input['info']['preprocess']) && is_array($input['info']['preprocess'])) {
+                $mapping['info']['preprocess'] = array_values(array_filter(
+                    $input['info']['preprocess'],
+                    fn($v) => is_string($v) && strlen($v)
+                ));
             }
         }
         $mapping['info']['label'] = $mapping['info']['label'] ?? $this->currentName;

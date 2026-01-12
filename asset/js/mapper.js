@@ -27,7 +27,7 @@
             info: {
                 attrs: {
                 },
-                children: ['label', 'from', 'to', 'querier', 'mapper', 'example'],
+                children: ['label', 'from', 'to', 'querier', 'mapper', 'preprocess', 'example'],
             },
             // Container for params (optional).
             params: {
@@ -116,6 +116,11 @@
                 },
             },
             mapper: {
+                attrs: {
+                },
+            },
+            // Repeatable: preprocessing transformations (XSL, JQ, etc.).
+            preprocess: {
                 attrs: {
                 },
             },
