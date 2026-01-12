@@ -760,7 +760,14 @@ class MapperConfig
         } else {
             $content = $this->loadMappingContent((string) $mappingOrRef);
             if ($content) {
-                $mapping = $this->parseContent($content, $options);
+                // PHP files return an array directly.
+                if (is_array($content)) {
+                    $mapping = isset($content['info'])
+                        ? $this->parseNormalizedArray($content, $options)
+                        : $this->parseMapList($content, $options);
+                } else {
+                    $mapping = $this->parseContent($content, $options);
+                }
             }
         }
 
@@ -786,8 +793,10 @@ class MapperConfig
 
     /**
      * Load mapping content from a reference.
+     *
+     * @return string|array|null String, array (PHP), or null on error.
      */
-    protected function loadMappingContent(string $reference): ?string
+    protected function loadMappingContent(string $reference)
     {
         // Database reference: "mapping:5"
         if (mb_substr($reference, 0, 8) === 'mapping:') {
@@ -814,7 +823,7 @@ class MapperConfig
                 $file = mb_substr($reference, strlen($prefix) + 1);
                 $filepath = $prefixes[$prefix] . $file;
                 if (file_exists($filepath) && is_readable($filepath)) {
-                    return trim((string) file_get_contents($filepath));
+                    return $this->loadFileContent($filepath);
                 }
                 return null;
             }
@@ -834,10 +843,33 @@ class MapperConfig
         // Try as module file without prefix.
         $filepath = $prefixes['module'] . $reference;
         if (file_exists($filepath) && is_readable($filepath)) {
-            return trim((string) file_get_contents($filepath));
+            return $this->loadFileContent($filepath);
         }
 
         return null;
+    }
+
+    /**
+     * Load file content, handling PHP files specially.
+     *
+     * @return string|array|null String for text files, array for PHP files.
+     */
+    protected function loadFileContent(string $filepath)
+    {
+        // PHP files are included and must return an array.
+        if (pathinfo($filepath, PATHINFO_EXTENSION) === 'php') {
+            $data = include $filepath;
+            if (!is_array($data)) {
+                $this->logger->err(
+                    'PHP mapping file "{file}" must return an array.',
+                    ['file' => $filepath]
+                );
+                return null;
+            }
+            return $data;
+        }
+
+        return trim((string) file_get_contents($filepath));
     }
 
     /**
