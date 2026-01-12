@@ -1,0 +1,36 @@
+{
+    "o:resource_name": "o:Item",
+    "dcterms:title": [
+        {"@value": "Bodleian Library MS. Ind. Inst. Misc. 22", "type": "literal"}
+    ],
+    "dcterms:description": [
+        {"@value": "[Kalighat paintings - separate sheets]", "type": "literal"}
+    ],
+    "dcterms:date": [
+        {"@value": "1875-01-01T00:00:00Z", "type": "literal"}
+    ],
+    "dcterms:rightsHolder": [
+        {"@value": "Access to this manuscript is restricted - please email for details", "type": "literal"}
+    ],
+    "dcterms:isFormatOf": [
+        {"@id": "https://iiif.bodleian.ox.ac.uk/iiif/manifest/e32a277e-91e2-4a6d-8ba6-cc4bad230410.json", "type": "uri"}
+    ],
+    "dcterms:subject": [
+        {"@value": "Kalighat (Calcutta, India)--Social life and customs--Pictorial works--19th century", "type": "literal"}
+    ],
+    "dcterms:extent": [
+        {"@value": "445 x 280 mm", "type": "literal"},
+        {"@value": "Waterbased colour on machine made paper over pencil, mounted on paper", "type": "literal"}
+    ],
+    "bibo:locator": [
+        {"@value": "Bodleian Library MS. Ind. Inst. Misc. 22", "type": "literal"}
+    ],
+    "dcterms:identifier": [
+        {"@value": "MS. Ind. Inst. Misc. 22", "type": "literal"}
+    ],
+    "_metadata": {
+        "source": "https://iiif.bodleian.ox.ac.uk/iiif/manifest/e32a277e-91e2-4a6d-8ba6-cc4bad230410.json",
+        "mapping": "iiif/iiif2xx.base.jsdot.ini",
+        "format": "IIIF Presentation API v2"
+    }
+}

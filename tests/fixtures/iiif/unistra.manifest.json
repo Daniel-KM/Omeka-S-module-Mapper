@@ -1,0 +1,162 @@
+{
+  "@context": "http://iiif.io/api/presentation/2/context.json",
+  "@type": "sc:Manifest",
+  "@id": "https://cdm21057.contentdm.oclc.org/iiif/coll3:37/manifest.json",
+  "label": "Abies alba : branches et cônes dressés",
+  "metadata": [
+    {
+      "label": "Classification Dewey",
+      "value": "585 Gymnospermes"
+    },
+    {
+      "label": "Sous-embranchement",
+      "value": "Gymnospermes"
+    },
+    {
+      "label": "Nom vernaculaire allemand",
+      "value": "Weisstanne"
+    },
+    {
+      "label": "Editeur scientifique",
+      "value": "Kuballa, Bernard"
+    },
+    {
+      "label": "Classe",
+      "value": "Conéféropsidées"
+    },
+    {
+      "label": "Date de la photographie",
+      "value": "1980-09"
+    },
+    {
+      "label": "Date de numérisation",
+      "value": "2001"
+    },
+    {
+      "label": "Photographe",
+      "value": "Ourisson, Nicole"
+    },
+    {
+      "label": "Droits",
+      "value": "conditions spécifiques d'utilisation"
+    },
+    {
+      "label": "Editeur",
+      "value": "Université de Strasbourg. Faculté de Pharmacie"
+    },
+    {
+      "label": "Ordre",
+      "value": "Coniférales"
+    },
+    {
+      "label": "Genre",
+      "value": "Abies"
+    },
+    {
+      "label": "Taxon",
+      "value": "Abies alba"
+    },
+    {
+      "label": "Note 1",
+      "value": "Titres et résumés rédigés par Bernard Kuballa."
+    },
+    {
+      "label": "Embranchement",
+      "value": "Spermatophytes"
+    },
+    {
+      "label": "Nom vernaculaire",
+      "value": "Sapin blanc; Sapin pectiné"
+    },
+    {
+      "label": "Nom vernaculaire anglais",
+      "value": "Silver fir"
+    },
+    {
+      "label": "Famille",
+      "value": "Conifères; Pinacées"
+    },
+    {
+      "label": "Source",
+      "value": "Diapositive (film : / - photo 18) numérisée en format tiff (cd 2 -c.054)."
+    },
+    {
+      "label": "Titre complet",
+      "value": "Abies alba : branches et cônes dressés"
+    },
+    {
+      "label": "Type",
+      "value": "image"
+    },
+    {
+      "label": "Repository",
+      "value": "CONTENTdm Title"
+    }
+  ],
+  "attribution": [
+    "",
+    "conditions spécifiques d'utilisation"
+  ],
+  "seeAlso": {
+    "@id": "https://cdm21057.contentdm.oclc.org/oai/oai.php?verb=GetRecord&identifier=oai:cdm21057.contentdm.oclc.org:coll3/37&metadataPrefix=oai_qdc",
+    "format": "application/xml",
+    "profile": "http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd"
+  },
+  "within": "https://cdm21057.contentdm.oclc.org/iiif/coll3/manifest.json",
+  "sequences": [
+    {
+      "@id": "https://cdm21057.contentdm.oclc.org/iiif/coll3:37/sequence/s0",
+      "@type": "sc:Sequence",
+      "label": "Abies alba : branches et cônes dressés",
+      "canvases": [
+        {
+          "@id": "https://cdm21057.contentdm.oclc.org/iiif/coll3:37/canvas/c0",
+          "@type": "sc:Canvas",
+          "label": "Abies alba : branches et cônes dressés",
+          "images": [
+            {
+              "@id": "https://cdm21057.contentdm.oclc.org/iiif/coll3:37/annotation/a0",
+              "@type": "oa:Annotation",
+              "motivation": "sc:painting",
+              "resource": {
+                "@id": "https://cdm21057.contentdm.oclc.org/iiif/2/coll3:37/full/full/0/default.jpg",
+                "@type": "dctypes:Image",
+                "service": {
+                  "@context": "http://iiif.io/api/image/2/context.json",
+                  "@id": "https://cdm21057.contentdm.oclc.org/iiif/2/coll3:37",
+                  "width": 694,
+                  "height": 1053,
+                  "tiles": [
+                    {
+                      "width": 694,
+                      "scaleFactors": [1, 2, 4, 8, 16]
+                    }
+                  ],
+                  "profile": "http://iiif.io/api/image/2/level1.json",
+                  "protocol": "http://iiif.io/api/image"
+                },
+                "format": "image/jpeg",
+                "width": 694,
+                "height": 1053
+              },
+              "on": "https://cdm21057.contentdm.oclc.org/iiif/coll3:37/canvas/c0"
+            }
+          ],
+          "width": 694,
+          "height": 1053
+        }
+      ]
+    }
+  ],
+  "structures": [
+    {
+      "@id": "https://cdm21057.contentdm.oclc.org/iiif/coll3:37/range/r0",
+      "@type": "sc:Range",
+      "label": "Abies alba : branches et cônes dressés",
+      "ranges": [],
+      "canvases": [
+        "https://cdm21057.contentdm.oclc.org/iiif/coll3:37/canvas/c0"
+      ]
+    }
+  ]
+}

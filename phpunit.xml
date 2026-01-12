@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE phpunit>
+<phpunit
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="http://schema.phpunit.de/9.5/phpunit.xsd"
+    colors="true"
+    backupGlobals="false"
+    bootstrap="./tests/bootstrap.php"
+    >
+    <testsuites>
+        <!-- Unit tests that don't need Application (fast) -->
+        <testsuite name="unit">
+            <file>tests/MapperTest/Stdlib/FilterTraitTest.php</file>
+            <file>tests/MapperTest/Stdlib/PatternParserTest.php</file>
+        </testsuite>
+        <!-- MapperConfig tests (core functionality) -->
+        <testsuite name="config">
+            <file>tests/MapperTest/Stdlib/MapNormalizerTest.php</file>
+            <file>tests/MapperTest/Stdlib/MapperConfigTest.php</file>
+            <file>tests/MapperTest/Stdlib/AutomapFieldsTest.php</file>
+        </testsuite>
+        <!-- XSLT processing tests -->
+        <testsuite name="xslt">
+            <file>tests/MapperTest/Stdlib/ProcessXsltTest.php</file>
+            <file>tests/MapperTest/Stdlib/PreprocessorTest.php</file>
+        </testsuite>
+        <!-- LIDO mapping tests -->
+        <testsuite name="lido">
+            <file>tests/MapperTest/Stdlib/LidoMappingTest.php</file>
+        </testsuite>
+        <!-- IIIF mapping tests with fixtures -->
+        <testsuite name="iiif">
+            <file>tests/MapperTest/Stdlib/IiifMappingTest.php</file>
+        </testsuite>
+        <!-- Content-DM mapping tests with fixtures -->
+        <testsuite name="contentdm">
+            <file>tests/MapperTest/Stdlib/ContentDmMappingTest.php</file>
+        </testsuite>
+        <!-- Mapper conversion tests -->
+        <testsuite name="conversion">
+            <file>tests/MapperTest/Stdlib/MapperConversionTest.php</file>
+            <file>tests/MapperTest/Stdlib/MapperTest.php</file>
+        </testsuite>
+        <!-- Service factory tests -->
+        <testsuite name="service">
+            <directory suffix="Test.php">tests/MapperTest/Service</directory>
+        </testsuite>
+        <!-- API adapter tests -->
+        <testsuite name="api">
+            <directory suffix="Test.php">tests/MapperTest/Api</directory>
+        </testsuite>
+        <!-- Controller tests (HTTP dispatch) -->
+        <testsuite name="controller">
+            <directory suffix="Test.php">tests/MapperTest/Controller</directory>
+        </testsuite>
+        <!-- Combined mapping tests (recommended for CI) -->
+        <testsuite name="mapping">
+            <file>tests/MapperTest/Stdlib/FilterTraitTest.php</file>
+            <file>tests/MapperTest/Stdlib/PatternParserTest.php</file>
+            <file>tests/MapperTest/Stdlib/MapNormalizerTest.php</file>
+            <file>tests/MapperTest/Stdlib/MapperConfigTest.php</file>
+            <file>tests/MapperTest/Stdlib/AutomapFieldsTest.php</file>
+            <file>tests/MapperTest/Stdlib/ProcessXsltTest.php</file>
+            <file>tests/MapperTest/Stdlib/PreprocessorTest.php</file>
+            <file>tests/MapperTest/Stdlib/LidoMappingTest.php</file>
+            <file>tests/MapperTest/Stdlib/IiifMappingTest.php</file>
+            <file>tests/MapperTest/Stdlib/ContentDmMappingTest.php</file>
+            <file>tests/MapperTest/Stdlib/MapperConversionTest.php</file>
+            <file>tests/MapperTest/Stdlib/MapperTest.php</file>
+        </testsuite>
+    </testsuites>
+    <php>
+        <env name="APPLICATION_ENV" value="testing"/>
+        <includePath>./tests</includePath>
+    </php>
+</phpunit>

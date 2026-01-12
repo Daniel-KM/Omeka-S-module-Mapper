@@ -1,0 +1,118 @@
+{
+    "@context": "http://iiif.io/api/presentation/2/context.json",
+    "@id": "https://gallica.bnf.fr/iiif/ark:/12148/btv1b10234719m/manifest.json",
+    "@type": "sc:Manifest",
+    "label": "Les très riches heures du duc de Berry",
+    "description": "Manuscrit enluminé du XVe siècle, l'un des plus célèbres exemples du gothique international. Réalisé pour Jean de France, duc de Berry, par les frères Limbourg.",
+    "attribution": "Bibliothèque nationale de France",
+    "license": "https://gallica.bnf.fr/html/und/conditions-dutilisation-des-contenus-de-gallica",
+    "logo": {
+        "@id": "https://gallica.bnf.fr/mbImage/logos/logo-bnf.png"
+    },
+    "related": {
+        "@id": "https://gallica.bnf.fr/ark:/12148/btv1b10234719m",
+        "format": "text/html"
+    },
+    "seeAlso": {
+        "@id": "https://gallica.bnf.fr/ark:/12148/btv1b10234719m.xml",
+        "format": "application/xml"
+    },
+    "navDate": "1412-01-01T00:00:00Z",
+    "metadata": [
+        {
+            "label": "Title",
+            "value": "Les très riches heures du duc de Berry"
+        },
+        {
+            "label": "Creator",
+            "value": "Frères Limbourg (Herman, Paul et Jean)"
+        },
+        {
+            "label": "Date",
+            "value": "1412-1416"
+        },
+        {
+            "label": "Type",
+            "value": "Manuscrit enluminé"
+        },
+        {
+            "label": "Format",
+            "value": "290 x 210 mm"
+        },
+        {
+            "label": "Language",
+            "value": "Latin"
+        },
+        {
+            "label": "Subject",
+            "value": "Livre d'heures"
+        },
+        {
+            "label": "Publisher",
+            "value": "Bibliothèque nationale de France"
+        },
+        {
+            "label": "Identifier",
+            "value": "ark:/12148/btv1b10234719m"
+        },
+        {
+            "label": "Rights",
+            "value": "Domaine public"
+        },
+        {
+            "label": "Repository",
+            "value": "Département des Manuscrits"
+        },
+        {
+            "label": "Shelfmark",
+            "value": "Ms. 65"
+        }
+    ],
+    "sequences": [
+        {
+            "@id": "https://gallica.bnf.fr/iiif/ark:/12148/btv1b10234719m/sequence/default",
+            "@type": "sc:Sequence",
+            "label": "Séquence par défaut",
+            "canvases": [
+                {
+                    "@id": "https://gallica.bnf.fr/iiif/ark:/12148/btv1b10234719m/canvas/f1",
+                    "@type": "sc:Canvas",
+                    "label": "f. 1r - Janvier",
+                    "height": 2900,
+                    "width": 2100,
+                    "images": [
+                        {
+                            "@id": "https://gallica.bnf.fr/iiif/ark:/12148/btv1b10234719m/annotation/f1",
+                            "@type": "oa:Annotation",
+                            "motivation": "sc:painting",
+                            "resource": {
+                                "@id": "https://gallica.bnf.fr/iiif/ark:/12148/btv1b10234719m/f1/full/full/0/default.jpg",
+                                "@type": "dctypes:Image",
+                                "format": "image/jpeg",
+                                "height": 2900,
+                                "width": 2100,
+                                "service": {
+                                    "@context": "http://iiif.io/api/image/2/context.json",
+                                    "@id": "https://gallica.bnf.fr/iiif/ark:/12148/btv1b10234719m/f1",
+                                    "profile": "http://iiif.io/api/image/2/level2.json"
+                                }
+                            },
+                            "on": "https://gallica.bnf.fr/iiif/ark:/12148/btv1b10234719m/canvas/f1"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "structures": [
+        {
+            "@id": "https://gallica.bnf.fr/iiif/ark:/12148/btv1b10234719m/range/r0",
+            "@type": "sc:Range",
+            "label": "Table des matières",
+            "ranges": [],
+            "canvases": [
+                "https://gallica.bnf.fr/iiif/ark:/12148/btv1b10234719m/canvas/f1"
+            ]
+        }
+    ]
+}

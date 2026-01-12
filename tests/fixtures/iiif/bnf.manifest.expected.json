@@ -1,0 +1,41 @@
+{
+    "o:resource_name": "o:Item",
+    "dcterms:title": [
+        {"@value": "Les très riches heures du duc de Berry", "type": "literal"}
+    ],
+    "dcterms:description": [
+        {"@value": "Manuscrit enluminé du XVe siècle, l'un des plus célèbres exemples du gothique international. Réalisé pour Jean de France, duc de Berry, par les frères Limbourg.", "type": "literal"}
+    ],
+    "dcterms:date": [
+        {"@value": "1412-01-01T00:00:00Z", "type": "literal"}
+    ],
+    "dcterms:rightsHolder": [
+        {"@value": "Bibliothèque nationale de France", "type": "literal"}
+    ],
+    "dcterms:isFormatOf": [
+        {"@id": "https://gallica.bnf.fr/iiif/ark:/12148/btv1b10234719m/manifest.json", "type": "uri"}
+    ],
+    "dcterms:creator": [
+        {"@value": "Frères Limbourg (Herman, Paul et Jean)", "type": "literal"}
+    ],
+    "dcterms:subject": [
+        {"@value": "Livre d'heures", "type": "literal"}
+    ],
+    "dcterms:extent": [
+        {"@value": "290 x 210 mm", "type": "literal"}
+    ],
+    "dcterms:language": [
+        {"@value": "Latin", "type": "literal"}
+    ],
+    "bibo:locator": [
+        {"@value": "Ms. 65", "type": "literal"}
+    ],
+    "dcterms:identifier": [
+        {"@value": "ark:/12148/btv1b10234719m", "type": "literal"}
+    ],
+    "_metadata": {
+        "source": "https://gallica.bnf.fr/iiif/ark:/12148/btv1b10234719m/manifest.json",
+        "mapping": "iiif/iiif2xx.base.jsdot.ini",
+        "format": "IIIF Presentation API v2"
+    }
+}

@@ -1,0 +1,109 @@
+{
+    "id": "359",
+    "collectionAlias": "coll3",
+    "contentTyp": "image/jpeg",
+    "filename": "coll3_0359.jpg",
+    "text": "Acer pseudoplatanus : silhouette d'un arbre adulte, en automne",
+    "thumbnailUri": "/digital/api/singleitem/image/coll3/359/default.png",
+    "downloadUri": "/digital/api/singleitem/image/coll3/359/default.jpg",
+    "streamUri": null,
+    "iiifInfoUri": "/iiif/2/coll3:359/info.json",
+    "parentId": null,
+    "objectInfo": {
+        "code": "OKAY",
+        "message": "Item retrieved successfully"
+    },
+    "hasPrintPDF": false,
+    "fullrsEnabled": true,
+    "fields": [
+        {
+            "key": "title",
+            "value": "Acer pseudoplatanus : silhouette d'un arbre adulte, en automne"
+        },
+        {
+            "key": "subjec",
+            "value": "Photographie couleur"
+        },
+        {
+            "key": "descri",
+            "value": "Institut de Botanique de Strasbourg"
+        },
+        {
+            "key": "creato",
+            "value": "Ourisson, Nicole"
+        },
+        {
+            "key": "publis",
+            "value": "Université de Strasbourg"
+        },
+        {
+            "key": "contri",
+            "value": "Kuballa, Bernard"
+        },
+        {
+            "key": "date",
+            "value": "1982"
+        },
+        {
+            "key": "type",
+            "value": "Image fixe"
+        },
+        {
+            "key": "format",
+            "value": "image/jpeg"
+        },
+        {
+            "key": "identi",
+            "value": "coll3_0359"
+        },
+        {
+            "key": "source",
+            "value": "Diapositive numérisée"
+        },
+        {
+            "key": "langua",
+            "value": "fra"
+        },
+        {
+            "key": "relati",
+            "value": "Érable sycomore"
+        },
+        {
+            "key": "covera",
+            "value": "Strasbourg (Bas-Rhin)"
+        },
+        {
+            "key": "rights",
+            "value": "Conditions spécifiques d'utilisation"
+        },
+        {
+            "key": "audien",
+            "value": "582.16 Dicotylédones"
+        },
+        {
+            "key": "editeu",
+            "value": "Université de Strasbourg. Faculté de Pharmacie"
+        },
+        {
+            "key": "datea",
+            "value": "1982-10"
+        },
+        {
+            "key": "dateb",
+            "value": "2001"
+        },
+        {
+            "key": "note",
+            "value": "Photographie de botanique - Collection Pharmacognosie"
+        },
+        {
+            "key": "typea",
+            "value": "Photographie"
+        },
+        {
+            "key": "droits",
+            "value": "Domaine réservé - reproduction interdite sans autorisation"
+        }
+    ],
+    "itemLink": "/api/singleitem/collection/coll3/id/359"
+}

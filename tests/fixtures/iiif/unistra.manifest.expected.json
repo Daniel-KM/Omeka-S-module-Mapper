@@ -1,0 +1,33 @@
+{
+    "o:resource_name": "o:Item",
+    "dcterms:title": [
+        {"@value": "Abies alba : branches et cônes dressés", "type": "literal"}
+    ],
+    "dcterms:isFormatOf": [
+        {"@id": "https://cdm21057.contentdm.oclc.org/iiif/coll3:37/manifest.json", "type": "uri"}
+    ],
+    "dcterms:creator": [
+        {"@value": "Ourisson, Nicole", "type": "literal"}
+    ],
+    "dcterms:contributor": [
+        {"@value": "Kuballa, Bernard", "type": "literal"}
+    ],
+    "dcterms:publisher": [
+        {"@value": "Université de Strasbourg. Faculté de Pharmacie", "type": "literal"}
+    ],
+    "dcterms:date": [
+        {"@value": "1980-09", "type": "literal"}
+    ],
+    "dcterms:subject": [
+        {"@value": "585 Gymnospermes", "type": "literal"},
+        {"@value": "Abies alba", "type": "literal"}
+    ],
+    "dcterms:rights": [
+        {"@value": "conditions spécifiques d'utilisation", "type": "literal"}
+    ],
+    "_metadata": {
+        "source": "https://cdm21057.contentdm.oclc.org/iiif/2/coll3:37/manifest.json",
+        "mapping": "iiif/iiif2xx.base.jsdot.ini",
+        "format": "IIIF Presentation API v2"
+    }
+}

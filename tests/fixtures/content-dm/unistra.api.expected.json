@@ -1,0 +1,56 @@
+{
+    "o:resource_name": "o:Item",
+    "dcterms:title": [
+        {"@value": "Acer pseudoplatanus : silhouette d'un arbre adulte, en automne", "type": "literal"}
+    ],
+    "dcterms:creator": [
+        {"@value": "Ourisson, Nicole", "type": "literal"}
+    ],
+    "dcterms:contributor": [
+        {"@value": "Kuballa, Bernard", "type": "literal"}
+    ],
+    "dcterms:publisher": [
+        {"@value": "Université de Strasbourg. Faculté de Pharmacie", "type": "literal"}
+    ],
+    "dcterms:date": [
+        {"@value": "1982-10", "type": "literal"}
+    ],
+    "dcterms:created": [
+        {"@value": "2001", "type": "literal"}
+    ],
+    "dcterms:format": [
+        {"@value": "Photographie couleur", "type": "literal"}
+    ],
+    "dcterms:type": [
+        {"@value": "Photographie", "type": "literal"}
+    ],
+    "dcterms:description": [
+        {"@value": "Photographie de botanique - Collection Pharmacognosie", "type": "literal"}
+    ],
+    "dcterms:subject": [
+        {"@value": "582.16 Dicotylédones", "type": "literal"}
+    ],
+    "dcterms:rights": [
+        {"@value": "Domaine réservé - reproduction interdite sans autorisation", "type": "literal"}
+    ],
+    "dcterms:alternative": [
+        {"@value": "Érable sycomore", "@language": "fra", "type": "literal"},
+        {"@value": "Strasbourg (Bas-Rhin)", "@language": "deu", "type": "literal"},
+        {"@value": "Conditions spécifiques d'utilisation", "@language": "eng", "type": "literal"}
+    ],
+    "dcterms:isFormatOf": [
+        {"@id": "https://cdm21057.contentdm.oclc.org/digital/api/singleitem/collection/coll3/id/359", "type": "uri"}
+    ],
+    "o:media": [
+        {
+            "o:media_type": "image/jpeg",
+            "o:filename": "coll3_0359.jpg",
+            "o:thumbnail": "/digital/api/singleitem/image/coll3/359/default.png"
+        }
+    ],
+    "_metadata": {
+        "source": "https://cdm21057.contentdm.oclc.org/digital/api/singleitem/collection/coll3/id/359",
+        "mapping": "content-dm/content-dm.unistra_collection-3.jmespath.ini",
+        "format": "Content-DM API"
+    }
+}
