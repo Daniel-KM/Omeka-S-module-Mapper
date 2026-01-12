@@ -301,6 +301,101 @@ class Mapper
     }
 
     /**
+     * Extract a sub-value from data using a path, with a default if not found.
+     *
+     * This is similar to extractValue() but returns a default value when the
+     * path is not found, and supports nested path traversal for arrays.
+     *
+     * @param array|object $data Source data (array or object).
+     * @param string $path Dot-notation path (e.g., "data.items" or "results.0").
+     * @param mixed $default Default value to return if path not found.
+     * @return mixed The extracted value or default.
+     *
+     * @todo This method is used only for BulkImport JsonReader extract for now. Clarify use, check if it is really needed or how to make it more generic.
+     */
+    public function extractSubValue($data, string $path, $default = null)
+    {
+        if (empty($path)) {
+            return $data;
+        }
+
+        // Convert object to array if needed.
+        if (is_object($data)) {
+            $data = json_decode(json_encode($data), true);
+        }
+
+        if (!is_array($data)) {
+            return $default;
+        }
+
+        // Navigate through the path.
+        $keys = explode('.', $path);
+        $current = $data;
+
+        foreach ($keys as $key) {
+            if (is_array($current) && array_key_exists($key, $current)) {
+                $current = $current[$key];
+            } else {
+                return $default;
+            }
+        }
+
+        return $current;
+    }
+
+    /**
+     * Convert a mapping section setting to a string using variable substitution.
+     *
+     * This retrieves a setting from the current mapping configuration and
+     * processes it through pattern replacement using the current variables.
+     *
+     * @param string $section The section name (e.g., "params", "info").
+     * @param string $key The setting key within the section.
+     * @param mixed $default Default value if setting not found.
+     * @return string|null The processed string value or null.
+     *
+     * @todo This method is used only for BulkImport JsonReader extract for now. Clarify use, check if it is really needed or how to make it more generic.
+     */
+    public function convertToString(string $section, string $key, $default = null): ?string
+    {
+        $setting = $this->mapperConfig->getSectionSetting($section, $key, $default);
+
+        if ($setting === null || $setting === '') {
+            // Only return default if it's a string or null.
+            return is_string($default) ? $default : null;
+        }
+
+        // If the setting is an array, it cannot be converted to a string.
+        if (is_array($setting)) {
+            return is_string($default) ? $default : null;
+        }
+
+        // If it's already a simple string without placeholders, return as-is.
+        if (is_string($setting) && strpos($setting, '{') === false) {
+            return $setting;
+        }
+
+        // Process pattern replacement with current variables.
+        if (is_string($setting)) {
+            $replace = [];
+
+            // Add variable replacements ({{ variable }} format).
+            foreach ($this->variables as $name => $value) {
+                if (is_scalar($value)) {
+                    $replace["{{ $name }}"] = $value;
+                    $replace["{{$name}}"] = $value;
+                    // Also support single-brace {variable} for simple cases.
+                    $replace["{$name}"] = $value;
+                }
+            }
+
+            return strtr($setting, $replace);
+        }
+
+        return is_scalar($setting) ? (string) $setting : null;
+    }
+
+    /**
      * Flatten a nested array into dot-notation keys.
      *
      * Example: ['a' => ['b' => 'c']] => ['a.b' => 'c']
@@ -382,9 +477,9 @@ class Mapper
             }
 
             // Lazy-load flat data and fields.
-            if ($flatData === null) {
-                $flatData = $this->flatArray($data);
-                $fields = $this->extractFields($data);
+            if ($flatData === null || $fields === null) {
+                $flatData = $flatData ?? $this->flatArray($data);
+                $fields = $fields ?? $this->extractFields($data);
             }
 
             $values = $this->extractValuesArray($data, $flatData, $fields, $fromPath, $querier);
