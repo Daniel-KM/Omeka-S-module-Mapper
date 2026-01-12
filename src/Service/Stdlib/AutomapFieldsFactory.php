@@ -12,12 +12,21 @@ class AutomapFieldsFactory implements FactoryInterface
     {
         $api = $services->get('Omeka\ApiManager');
         $easyMeta = $services->get('Common\EasyMeta');
+        $mapNormalizer = $services->get('Mapper\MapNormalizer');
+        $translator = $services->get('MvcTranslator');
         $logger = $services->get('Omeka\Logger');
 
         // Load default field mappings from config if available.
         $config = $services->get('Config');
         $map = $config['mapper']['field_automap'] ?? [];
 
-        return new AutomapFields($api, $easyMeta, $logger, $map);
+        return new AutomapFields(
+            $api,
+            $easyMeta,
+            $mapNormalizer,
+            $translator,
+            $logger,
+            $map
+        );
     }
 }

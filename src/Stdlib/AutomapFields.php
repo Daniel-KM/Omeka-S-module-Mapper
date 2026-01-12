@@ -17,6 +17,9 @@
  * - Old pattern detection with warnings
  * - Multiple targets with | separator
  *
+ * Uses MapNormalizer::parseFieldSpec() for field parsing, which handles
+ * quoted custom vocab labels with spaces (common in spreadsheet headers).
+ *
  * Migrated from BulkImport\Mvc\Controller\Plugin\AutomapFields.
  *
  * @copyright Daniel Berthereau, 2017-2026
@@ -26,43 +29,12 @@
 namespace Mapper\Stdlib;
 
 use Common\Stdlib\EasyMeta;
+use Laminas\I18n\Translator\TranslatorInterface;
 use Laminas\Log\Logger;
 use Omeka\Api\Manager as ApiManager;
 
 class AutomapFields
 {
-    /**
-     * Pattern to parse field specifications.
-     *
-     * Components (in order):
-     * - Field (term/keyword/label): required, at beginning
-     * - Datatype(s): ^^resource:item or ^^customvocab:"My List"
-     * - Language: @fra or @en-GB
-     * - Visibility: §private or §public
-     * - Pattern: ~ {{ value|trim }}
-     */
-    public const PATTERN = '#'
-        // Requires a term/keyword/label at beginning.
-        . '^\s*+(?<field>[^@§^~|\n\r]+)'
-        // Arguments in any order:
-        . '(?<args>(?:'
-        // Datatypes (^^resource:item or ^^customvocab:"Label").
-        . '(?:\s*\^\^(?<datatype>(?:customvocab:(?:"[^\n\r"]+"|\'[^\n\r\']+\')|[a-zA-Z_][\w:-]*)))'
-        // Language (@fra or @en-GB).
-        . '|(?:\s*@(?<language>(?:(?:[a-zA-Z0-9]+-)*[a-zA-Z]+|)))'
-        // Visibility (§private).
-        . '|(?:\s*§(?<visibility>private|public|))'
-        . ')*)?'
-        // Pattern (~ {{ value|trim }}).
-        . '(?:\s*~\s*(?<pattern>.*))?'
-        . '\s*$'
-        . '#';
-
-    /**
-     * Pattern to extract each datatype from args.
-     */
-    public const PATTERN_DATATYPES = '#\^\^(?<datatype>(?:customvocab:(?:"[^\n\r"]+"|\'[^\n\r\']+\')|[a-zA-Z_][\w:-]*))#';
-
     /**
      * Pattern to detect old format (deprecated).
      */
@@ -83,6 +55,16 @@ class AutomapFields
     protected $easyMeta;
 
     /**
+     * @var MapNormalizer
+     */
+    protected $mapNormalizer;
+
+    /**
+     * @var TranslatorInterface|null
+     */
+    protected $translator;
+
+    /**
      * @var Logger|null
      */
     protected $logger;
@@ -93,11 +75,6 @@ class AutomapFields
     protected $propertyLists;
 
     /**
-     * @var array Cached custom vocab labels to ids.
-     */
-    protected $customVocabLabels;
-
-    /**
      * @var array User-defined mapping overrides.
      */
     protected $map = [];
@@ -105,11 +82,15 @@ class AutomapFields
     public function __construct(
         ApiManager $api,
         EasyMeta $easyMeta,
+        MapNormalizer $mapNormalizer,
+        ?TranslatorInterface $translator = null,
         ?Logger $logger = null,
         array $map = []
     ) {
         $this->api = $api;
         $this->easyMeta = $easyMeta;
+        $this->mapNormalizer = $mapNormalizer;
+        $this->translator = $translator;
         $this->logger = $logger;
         $this->map = $map;
     }
@@ -143,9 +124,7 @@ class AutomapFields
             return $this->automapNoCheckField($fields, $options);
         }
 
-        // Return all values, preserving keys.
         $automaps = array_fill_keys(array_keys($fields), null);
-
         $fields = $this->cleanStrings($fields);
 
         $checkNamesAlone = (bool) $options['check_names_alone'];
@@ -155,7 +134,6 @@ class AutomapFields
 
         $map = array_merge($this->map, $options['map']);
 
-        // Prepare lookup lists.
         $lists = $this->preparePropertyLists($checkNamesAlone);
         $automapLists = $this->prepareAutomapLists($map);
 
@@ -168,33 +146,29 @@ class AutomapFields
             foreach ($fieldsMulti as $field) {
                 $this->checkOldPattern($field);
 
-                if (!preg_match(self::PATTERN, $field, $matches)) {
-                    continue;
-                }
-
-                $datatypes = $outputFullMatches
-                    ? $this->extractDatatypes($matches)
-                    : [];
-
-                $fieldName = trim($matches['field']);
-                $lowerField = mb_strtolower($fieldName);
+                // Extract field part before qualifiers (^^, @, §, ~).
+                // Handles labels with spaces like "Dublin Core:Title ^^literal".
+                $fieldPart = $this->extractFieldPart($field);
+                $lowerFieldPart = mb_strtolower($fieldPart);
 
                 // Check custom automap list first.
-                $found = $this->findInLists($fieldName, $lowerField, $automapLists);
+                $found = $this->findInLists($fieldPart, $lowerFieldPart, $automapLists);
                 if ($found !== null) {
                     $resolvedField = $map[$found] ?? $found;
+                    $parsed = $this->parseSpec($field);
                     $automaps[$index][] = $outputFullMatches
-                        ? $this->buildResult($resolvedField, $matches, $datatypes, $outputPropertyId)
+                        ? $this->buildResult($resolvedField, $parsed, $outputPropertyId)
                         : $resolvedField;
                     continue;
                 }
 
                 // Check property lists (terms and labels).
-                $found = $this->findInLists($fieldName, $lowerField, $lists);
+                $found = $this->findInLists($fieldPart, $lowerFieldPart, $lists);
                 if ($found !== null) {
                     $resolvedField = $this->propertyLists['names'][$found] ?? $found;
+                    $parsed = $this->parseSpec($field);
                     $automaps[$index][] = $outputFullMatches
-                        ? $this->buildResult($resolvedField, $matches, $datatypes, $outputPropertyId)
+                        ? $this->buildResult($resolvedField, $parsed, $outputPropertyId)
                         : $resolvedField;
                 }
             }
@@ -215,9 +189,6 @@ class AutomapFields
         $outputFullMatches = (bool) $options['output_full_matches'];
         $outputPropertyId = $outputFullMatches && $options['output_property_id'];
 
-        // Make field optional in pattern.
-        $pattern = substr_replace(self::PATTERN, '#^\s*+(?<field>[^@§^~|\n\r]+)?', 0, 30);
-
         foreach ($fields as $index => $fieldsMulti) {
             $fieldsMulti = $singleTarget || strpos($fieldsMulti, '~') !== false
                 ? [$fieldsMulti]
@@ -226,15 +197,11 @@ class AutomapFields
             foreach ($fieldsMulti as $field) {
                 $this->checkOldPattern($field);
 
-                if (!preg_match($pattern, $field, $matches)) {
-                    continue;
-                }
-
-                $fieldName = trim($matches['field'] ?? '');
+                $parsed = $this->parseSpec($field);
+                $fieldName = $parsed['field'] ?? '';
 
                 if ($outputFullMatches) {
-                    $datatypes = $this->extractDatatypes($matches);
-                    $automaps[$index][] = $this->buildResult($fieldName, $matches, $datatypes, $outputPropertyId);
+                    $automaps[$index][] = $this->buildResult($fieldName, $parsed, $outputPropertyId);
                 } else {
                     $automaps[$index][] = $fieldName;
                 }
@@ -245,27 +212,70 @@ class AutomapFields
     }
 
     /**
+     * Parse a field specification string.
+     *
+     * Extracts the pattern part and delegates field parsing to MapNormalizer.
+     *
+     * @return array With keys: field, datatype, language, is_public, pattern.
+     */
+    protected function parseSpec(string $spec): array
+    {
+        $pattern = null;
+
+        // Extract pattern part (everything after ~).
+        $tildePos = mb_strpos($spec, '~');
+        if ($tildePos !== false) {
+            $pattern = trim(mb_substr($spec, $tildePos + 1));
+            $spec = trim(mb_substr($spec, 0, $tildePos));
+        }
+
+        // Use MapNormalizer for field parsing.
+        $parsed = $this->mapNormalizer->parseFieldSpec($spec);
+
+        return [
+            'field' => $parsed['field'],
+            'datatype' => $parsed['datatype'] ?? [],
+            'language' => $parsed['language'],
+            'is_public' => $parsed['is_public'],
+            'pattern' => $pattern,
+        ];
+    }
+
+    /**
      * Build a full result array with all qualifiers.
      */
-    protected function buildResult(string $field, array $matches, array $datatypes, bool $includePropertyId): array
-    {
+    protected function buildResult(
+        string $field,
+        array $parsed,
+        bool $includePropertyId
+    ): array {
+        // Convert boolean visibility to string for API compatibility.
+        $isPublic = $parsed['is_public'] ?? null;
+        if ($isPublic === false) {
+            $isPublic = 'private';
+        } elseif ($isPublic === true) {
+            $isPublic = 'public';
+        }
+
         $result = [
             'field' => $field ?: null,
-            'datatype' => $this->normalizeDatatypes($datatypes),
-            'language' => empty($matches['language']) ? null : trim($matches['language']),
-            'is_public' => empty($matches['visibility']) ? null : trim($matches['visibility']),
-            'pattern' => empty($matches['pattern']) ? null : trim($matches['pattern']),
+            'datatype' => $parsed['datatype'] ?? [],
+            'language' => $parsed['language'] ?? null,
+            'is_public' => $isPublic,
+            'pattern' => $parsed['pattern'] ?? null,
         ];
 
         if ($includePropertyId) {
-            $result['property_id'] = $field ? $this->easyMeta->propertyId($field) : null;
+            $result['property_id'] = $field
+                ? $this->easyMeta->propertyId($field)
+                : null;
         }
 
         return $this->processPattern($result);
     }
 
     /**
-     * Process pattern to extract raw, replace, and twig components.
+     * Process pattern to extract raw, replace, and filter components.
      */
     protected function processPattern(array $result): array
     {
@@ -276,129 +286,36 @@ class AutomapFields
         $pattern = $result['pattern'];
 
         // Check for quoted raw value.
-        $isQuoted = (mb_substr($pattern, 0, 1) === '"' && mb_substr($pattern, -1) === '"')
-            || (mb_substr($pattern, 0, 1) === "'" && mb_substr($pattern, -1) === "'");
-
-        if ($isQuoted) {
+        $first = mb_substr($pattern, 0, 1);
+        $last = mb_substr($pattern, -1);
+        if (($first === '"' && $last === '"')
+            || ($first === "'" && $last === "'")
+        ) {
             $result['raw'] = trim(mb_substr($pattern, 1, -1));
             $result['pattern'] = null;
             return $result;
         }
 
-        // Special patterns.
-        $exceptions = ['{{ value }}', '{{ label }}', '{{ list }}'];
-        if (in_array($pattern, $exceptions)) {
+        // Special pattern: simple variable replacement without filter.
+        if ($pattern === '{{ value }}') {
             $result['replace'][] = $pattern;
             return $result;
         }
 
-        // Extract replacements ({{path}}) and twig filters.
-        if (preg_match_all('~\{\{( value | label | list |\S+?|\S.*?\S)\}\}~', $pattern, $matches) !== false) {
-            $result['replace'] = empty($matches[0]) ? [] : array_values(array_unique($matches[0]));
+        // Extract replacements ({{ path }}).
+        if (preg_match_all('~\{\{( value |\S+?|\S.*?\S)\}\}~', $pattern, $matches) !== false) {
+            $result['replace'] = empty($matches[0])
+                ? []
+                : array_values(array_unique($matches[0]));
         }
 
-        // Extract twig patterns ({{ ... }}).
+        // Extract filter expressions ({{ ...|filter }}).
         if (preg_match_all('~\{\{ ([^{}]+) \}\}~', $pattern, $matches) !== false) {
-            $result['twig'] = empty($matches[0]) ? [] : array_unique($matches[0]);
-            $result['twig'] = array_values(array_diff($result['twig'], $exceptions));
+            $result['filters'] = empty($matches[0]) ? [] : array_unique($matches[0]);
+            $result['filters'] = array_values(array_diff($result['filters'], ['{{ value }}']));
         }
 
         return $result;
-    }
-
-    /**
-     * Extract datatypes from regex matches.
-     */
-    protected function extractDatatypes(array $matches): array
-    {
-        if (empty($matches['args']) || empty($matches['datatype'])) {
-            return [];
-        }
-
-        $datatypeMatches = [];
-        preg_match_all(self::PATTERN_DATATYPES, $matches['args'], $datatypeMatches, PREG_SET_ORDER);
-
-        return array_column($datatypeMatches, 'datatype');
-    }
-
-    /**
-     * Normalize datatype names and resolve custom vocab labels.
-     */
-    protected function normalizeDatatypes(array $datatypes): array
-    {
-        if (empty($datatypes)) {
-            return [];
-        }
-
-        $result = [];
-        foreach ($datatypes as $datatype) {
-            // Resolve custom vocab labels.
-            if (strpos($datatype, 'customvocab:') === 0) {
-                $datatype = $this->resolveCustomVocabDatatype($datatype);
-            }
-
-            // Normalize via EasyMeta.
-            $normalized = $this->easyMeta->dataTypeName($datatype);
-            if ($normalized !== null) {
-                $result[] = $normalized;
-            }
-        }
-
-        return array_values(array_unique(array_filter($result)));
-    }
-
-    /**
-     * Resolve custom vocab datatype with label to id.
-     *
-     * Converts "customvocab:'My List'" to "customvocab:123".
-     */
-    protected function resolveCustomVocabDatatype(string $datatype): string
-    {
-        $suffix = substr($datatype, 12);
-
-        // Already an id.
-        if (is_numeric($suffix)) {
-            return $datatype;
-        }
-
-        // Extract label from quotes.
-        if ((mb_substr($suffix, 0, 1) === '"' && mb_substr($suffix, -1) === '"')
-            || (mb_substr($suffix, 0, 1) === "'" && mb_substr($suffix, -1) === "'")
-        ) {
-            $label = mb_substr($suffix, 1, -1);
-        } else {
-            $label = $suffix;
-        }
-
-        // Lookup custom vocab id by label.
-        if ($this->customVocabLabels === null) {
-            $this->loadCustomVocabLabels();
-        }
-
-        $id = $this->customVocabLabels[$label] ?? null;
-        if ($id !== null) {
-            return 'customvocab:' . $id;
-        }
-
-        // Return original if not found.
-        return $datatype;
-    }
-
-    /**
-     * Load custom vocab labels to ids mapping.
-     */
-    protected function loadCustomVocabLabels(): void
-    {
-        $this->customVocabLabels = [];
-
-        try {
-            $customVocabs = $this->api->search('custom_vocabs', [], ['responseContent' => 'resource'])->getContent();
-            foreach ($customVocabs as $customVocab) {
-                $this->customVocabLabels[$customVocab->getLabel()] = $customVocab->getId();
-            }
-        } catch (\Exception $e) {
-            // Custom vocab module not installed.
-        }
     }
 
     /**
@@ -421,10 +338,17 @@ class AutomapFields
 
         // Labels (Dublin Core : Title).
         $labelNames = array_keys($this->propertyLists['names']);
-        $labelLabels = \SplFixedArray::fromArray(array_keys($this->propertyLists['labels']));
+        $labelLabels = \SplFixedArray::fromArray(
+            array_keys($this->propertyLists['labels'])
+        );
         $labelLabels->setSize(count($labelNames));
-        $lists['labels'] = array_combine($labelNames, array_map('strval', $labelLabels->toArray()));
-        $lists['lower_labels'] = array_filter(array_map('mb_strtolower', $lists['labels']));
+        $lists['labels'] = array_combine(
+            $labelNames,
+            array_map('strval', $labelLabels->toArray())
+        );
+        $lists['lower_labels'] = array_filter(
+            array_map('mb_strtolower', $lists['labels'])
+        );
 
         // Local names (title without prefix).
         if ($checkNamesAlone) {
@@ -432,13 +356,19 @@ class AutomapFields
                 $w = explode(':', (string) $v);
                 return end($w);
             }, $lists['names']);
-            $lists['lower_local_names'] = array_map('mb_strtolower', $lists['local_names']);
+            $lists['lower_local_names'] = array_map(
+                'mb_strtolower',
+                $lists['local_names']
+            );
 
             $lists['local_labels'] = array_map(function ($v) {
                 $w = explode(':', (string) $v);
                 return end($w);
             }, $lists['labels']);
-            $lists['lower_local_labels'] = array_map('mb_strtolower', $lists['local_labels']);
+            $lists['lower_local_labels'] = array_map(
+                'mb_strtolower',
+                $lists['local_labels']
+            );
         }
 
         return $lists;
@@ -484,6 +414,8 @@ class AutomapFields
 
     /**
      * Prepare automap lists from user-defined map.
+     *
+     * Includes translations if translator is available.
      */
     protected function prepareAutomapLists(array $map): array
     {
@@ -491,7 +423,25 @@ class AutomapFields
             return [];
         }
 
-        // Add mapped values as keys too.
+        // Add translations for each entry (case-sensitive and insensitive).
+        if ($this->translator) {
+            $additions = [];
+            foreach ($map as $name => $norm) {
+                // Translate original name.
+                $translation = $this->translator->translate($name);
+                if ($translation !== $name) {
+                    $additions[$translation] = $norm;
+                }
+                // Translate lowercase name.
+                $lowerName = mb_strtolower($name);
+                $translationLower = $this->translator->translate($lowerName);
+                if ($translationLower !== $lowerName) {
+                    $additions[$translationLower] = $norm;
+                }
+            }
+            $map = array_merge($map, $additions);
+        }
+
         $map += array_combine($map, $map);
 
         $lists = [];
@@ -508,8 +458,11 @@ class AutomapFields
     /**
      * Find a field in lookup lists.
      */
-    protected function findInLists(string $field, string $lowerField, array $lists): ?string
-    {
+    protected function findInLists(
+        string $field,
+        string $lowerField,
+        array $lists
+    ): ?string {
         foreach ($lists as $listName => $list) {
             $toSearch = strpos($listName, 'lower_') === 0 ? $lowerField : $field;
             $found = array_search($toSearch, $list, true);
@@ -519,6 +472,22 @@ class AutomapFields
         }
 
         return null;
+    }
+
+    /**
+     * Extract field part before qualifiers.
+     *
+     * Captures everything before the first qualifier marker (^^, @, §, ~).
+     * Handles labels with spaces like "Dublin Core:Title ^^literal @en".
+     */
+    protected function extractFieldPart(string $spec): string
+    {
+        // Match everything until the first qualifier marker.
+        // Similar to BulkImport's regex: (?<field>[^@§^~|\n\r]+)
+        if (preg_match('/^([^@§\^~|]+)/u', $spec, $matches)) {
+            return trim($matches[1]);
+        }
+        return trim($spec);
     }
 
     /**
@@ -532,7 +501,9 @@ class AutomapFields
 
         if ($this->logger) {
             $this->logger->warn(
-                'The field pattern "{field}" uses old format. Update by replacing ";" with "^^", removing spaces after "^^", "@", "§", and wrapping custom vocab labels with quotes.',
+                'The field pattern "{field}" uses old format. Update by '
+                . 'replacing ";" with "^^", removing spaces after "^^", "@", '
+                . '"§", and wrapping custom vocab labels with quotes.',
                 ['field' => $field]
             );
         }
@@ -546,7 +517,11 @@ class AutomapFields
     protected function cleanStrings(array $strings): array
     {
         return array_map(function ($string) {
-            $string = preg_replace('/[\s\h\v[:blank:][:space:]]+/u', ' ', (string) $string);
+            $string = preg_replace(
+                '/[\s\h\v[:blank:][:space:]]+/u',
+                ' ',
+                (string) $string
+            );
             return preg_replace('~\s*:\s*~', ':', trim($string));
         }, $strings);
     }

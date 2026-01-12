@@ -561,8 +561,11 @@ class MapNormalizer
      * Parse a field specification string.
      *
      * Format: "dcterms:title ^^datatype @language §visibility"
+     *
+     * Handles quoted custom vocab labels with spaces:
+     * "dcterms:type ^^customvocab:"My Type List" @fra"
      */
-    protected function parseFieldSpec(string $spec): array
+    public function parseFieldSpec(string $spec): array
     {
         $result = [
             'field' => null,
@@ -583,8 +586,9 @@ class MapNormalizer
             $spec = trim(mb_substr($spec, 0, $tildePos));
         }
 
-        // Split by whitespace.
-        $parts = preg_split('/\s+/', $spec);
+        // Split by whitespace, preserving quoted strings.
+        preg_match_all('/(?:"[^"]*"|\'[^\']*\'|\S)+/', $spec, $matches);
+        $parts = $matches[0];
         $datatypes = [];
 
         foreach ($parts as $part) {
@@ -810,7 +814,7 @@ class MapNormalizer
      * @param array $datatypes List of datatype strings.
      * @return array Normalized datatypes.
      */
-    protected function normalizeDatatypes(array $datatypes): array
+    public function normalizeDatatypes(array $datatypes): array
     {
         $result = [];
         foreach ($datatypes as $datatype) {
