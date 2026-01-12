@@ -669,6 +669,24 @@ class Mapper
             }
         }
 
+        // Check if all source data replacements are empty (semi-strict mode).
+        // If so, skip this value entirely.
+        if (!empty($mod['replace'])) {
+            $allEmpty = true;
+            foreach ($mod['replace'] as $wrappedQuery) {
+                if (mb_substr($wrappedQuery, 0, 2) === '{{') {
+                    continue; // Skip context variables.
+                }
+                if (isset($replace[$wrappedQuery]) && strlen($replace[$wrappedQuery])) {
+                    $allEmpty = false;
+                    break;
+                }
+            }
+            if ($allEmpty) {
+                return null;
+            }
+        }
+
         // Apply simple replacements.
         $result = strtr($mod['pattern'], $replace);
 
@@ -682,6 +700,9 @@ class Mapper
                 $replace
             );
         }
+
+        // Trim result to avoid leading/trailing whitespace from missing values.
+        $result = trim($result);
 
         // Verify at least one replacement was made.
         if (!$this->hasReplacement($fromValue, $result, $mod)) {
@@ -812,6 +833,24 @@ class Mapper
             }
         }
 
+        // Check if all source data replacements are empty (semi-strict mode).
+        // If so, skip this value entirely.
+        if (!empty($mod['replace'])) {
+            $allEmpty = true;
+            foreach ($mod['replace'] as $wrappedQuery) {
+                if (mb_substr($wrappedQuery, 0, 2) === '{{') {
+                    continue; // Skip context variables.
+                }
+                if (isset($replace[$wrappedQuery]) && strlen($replace[$wrappedQuery])) {
+                    $allEmpty = false;
+                    break;
+                }
+            }
+            if ($allEmpty) {
+                return null;
+            }
+        }
+
         // Apply simple replacements.
         $result = strtr($mod['pattern'], $replace);
 
@@ -825,6 +864,9 @@ class Mapper
                 $replace
             );
         }
+
+        // Trim result to avoid leading/trailing whitespace from missing values.
+        $result = trim($result);
 
         // Verify at least one replacement was made.
         $checkValue = $fromValue instanceof DOMNode ? (string) $fromValue->nodeValue : $stringValue;
