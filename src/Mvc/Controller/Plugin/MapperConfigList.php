@@ -54,7 +54,8 @@ class MapperConfigList extends AbstractPlugin
      *
      * @param array $subDirAndExtensions Array of subdirectory => extension pairs.
      *   Special value ['mapping' => true] lists database mappings.
-     *   Example: [['mapping' => true], ['xml' => 'ini'], ['json' => 'xml']]
+     *   Special value ['*' => 'ext'] scans all subdirectories for that extension.
+     *   Example: [['mapping' => true], ['xml' => 'ini'], ['*' => 'xsl']]
      * @return array Grouped list of mappings by source.
      */
     public function listMappings(array $subDirAndExtensions = []): array
@@ -94,6 +95,28 @@ class MapperConfigList extends AbstractPlugin
                 continue;
             }
 
+            // Scan all subdirectories for a given extension.
+            if ($subDirectory === '*') {
+                $this->mappingExtension = $extension;
+                $subDirectories = $this->getSubDirectories(dirname(__DIR__, 4) . '/data/mapping');
+                foreach ($subDirectories as $subDir) {
+                    $this->mappingDirectory = dirname(__DIR__, 4) . '/data/mapping/' . $subDir;
+                    $mappingFiles = $this->getMappingFiles();
+                    foreach ($mappingFiles as $file) {
+                        $files['module']['options']['module:' . $subDir . '/' . $file] = $subDir . '/' . $file;
+                    }
+                }
+                $subDirectories = $this->getSubDirectories($this->basePath . '/mapping');
+                foreach ($subDirectories as $subDir) {
+                    $this->mappingDirectory = $this->basePath . '/mapping/' . $subDir;
+                    $mappingFiles = $this->getMappingFiles();
+                    foreach ($mappingFiles as $file) {
+                        $files['user']['options']['user:' . $subDir . '/' . $file] = $subDir . '/' . $file;
+                    }
+                }
+                continue;
+            }
+
             $this->mappingExtension = $extension;
 
             // Module mapping files.
@@ -115,6 +138,28 @@ class MapperConfigList extends AbstractPlugin
     }
 
     /**
+     * Get all subdirectories of a directory.
+     *
+     * @param string $directory
+     * @return array List of subdirectory names.
+     */
+    protected function getSubDirectories(string $directory): array
+    {
+        $subDirs = [];
+        if (!is_dir($directory)) {
+            return $subDirs;
+        }
+        $iterator = new \DirectoryIterator($directory);
+        foreach ($iterator as $fileInfo) {
+            if ($fileInfo->isDir() && !$fileInfo->isDot()) {
+                $subDirs[] = $fileInfo->getFilename();
+            }
+        }
+        sort($subDirs);
+        return $subDirs;
+    }
+
+    /**
      * Get internal module mappings (built-in mapping files).
      *
      * @return array List of module mapping file references.
@@ -124,28 +169,13 @@ class MapperConfigList extends AbstractPlugin
         static $internalMappings;
 
         if ($internalMappings === null) {
-            // Search for all mapping files in the reorganized folder structure.
-            // Folders are organized by data source type.
+            // Search for all mapping files in all subdirectories.
+            // Uses wildcard '*' to scan dynamically.
             $internalMappings = $this->listMappings([
-                // INI format mappings.
-                ['content-dm' => 'ini'],
-                ['file' => 'ini'],
-                ['iiif' => 'ini'],
-                // XML format mappings.
-                ['ead' => 'xml'],
-                ['idref' => 'xml'],
-                ['lido' => 'xml'],
-                ['unimarc' => 'xml'],
-                // JSON format mappings (for IdRef).
-                ['idref' => 'json'],
-                // XSL transformations (in their respective folders).
-                ['common' => 'xsl'],
-                ['ead' => 'xsl'],
-                ['lido' => 'xsl'],
-                ['mets' => 'xsl'],
-                ['mods' => 'xsl'],
-                ['sru' => 'xsl'],
-                ['unimarc' => 'xsl'],
+                ['*' => 'ini'],
+                ['*' => 'xml'],
+                ['*' => 'json'],
+                ['*' => 'xsl'],
             ])['module']['options'];
         }
 
