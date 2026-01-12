@@ -128,7 +128,7 @@ class MapperSelect extends AbstractGroupByOwnerSelect
                 $label = $this->getMappingLabel($reference);
                 if (!$label) {
                     // Fallback: create a readable label from the filename.
-                    $label = ucfirst(str_replace(['_', '-', '.'], ' ', $name));
+                    $label = ucfirst(strtr($name, ['_' => ' ', '-' => ' ', '.' => ' ']));
                 }
                 $label .= ' (' . $subdir . '/' . $ext . ')';
 

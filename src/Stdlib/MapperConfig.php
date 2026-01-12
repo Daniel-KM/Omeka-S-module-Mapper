@@ -541,7 +541,7 @@ class MapperConfig
             }
 
             // Replace the expression with the result.
-            $result = str_replace($expression, (string) $value, $result);
+            $result = strtr($result, [$expression => (string) $value]);
         }
 
         return $result;
@@ -1006,7 +1006,7 @@ class MapperConfig
                     ['file' => $resolvedPath, 'name' => $this->currentName]
                 );
                 // Remove the include tag.
-                $content = str_replace($includeTag, '', $content);
+                $content = strtr($content, [$includeTag => '']);
                 continue;
             }
 
@@ -1022,7 +1022,7 @@ class MapperConfig
             $innerContent = $this->extractXmlInnerContent($includedContent);
 
             // Replace the include tag with the inner content.
-            $content = str_replace($includeTag, $innerContent, $content);
+            $content = strtr($content, [$includeTag => $innerContent]);
         }
 
         return $content;
@@ -1759,6 +1759,14 @@ class MapperConfig
                 $result[self::MAP_MOD] = $this->parsePattern($map[self::MAP_MOD]);
             } elseif (is_array($map[self::MAP_MOD])) {
                 $result[self::MAP_MOD] = $map[self::MAP_MOD];
+                // Parse pattern if present but not yet parsed.
+                if (!empty($map[self::MAP_MOD]['pattern'])
+                    && empty($map[self::MAP_MOD]['replace'])
+                    && empty($map[self::MAP_MOD]['filters'])
+                ) {
+                    $patternMod = $this->parsePattern((string) $map[self::MAP_MOD]['pattern']);
+                    $result[self::MAP_MOD] = array_merge($result[self::MAP_MOD], $patternMod);
+                }
             }
         }
 

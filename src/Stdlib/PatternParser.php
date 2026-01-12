@@ -54,13 +54,16 @@ class PatternParser
         $doubleBraceMatches = $this->findDoubleBraceExpressions($pattern);
 
         foreach ($doubleBraceMatches as $match) {
-            // Check if it's a filter expression (contains |).
-            if (mb_strpos($match, '|') !== false) {
+            $hasFilter = mb_strpos($match, '|') !== false;
+            $hasInnerReplace = $this->hasSingleBraceInside($match);
+
+            // Treat as filter expression if:
+            // - Contains | (explicit filter), or
+            // - Contains {xxx} replacement (needs filter processing to resolve)
+            if ($hasFilter || $hasInnerReplace) {
                 $result['filters'][] = $match;
                 $result['has_filters'] = true;
-                // Check if filter expression has replacements inside.
-                // e.g., {{ {path}|filter }} has inner replacement.
-                $result['filters_has_replace'][] = $this->hasSingleBraceInside($match);
+                $result['filters_has_replace'][] = $hasInnerReplace;
             } else {
                 $result['replace'][] = $match;
             }
@@ -70,14 +73,14 @@ class PatternParser
         $singleBraceMatches = $this->findSingleBraceExpressions($pattern);
 
         foreach ($singleBraceMatches as $match) {
-            // Skip if processed or inside a double-brace expression.
+            // Skip if already processed.
             if (in_array($match, $result['replace'])) {
                 continue;
             }
 
-            if (!$this->isInsideDoubleBrace($match, $doubleBraceMatches)) {
-                $result['replace'][] = $match;
-            }
+            // Add to replace array. Even if inside a double-brace expression,
+            // we need the replacement value for filter processing.
+            $result['replace'][] = $match;
         }
 
         // Determine if simple pattern (no twig, just replacements).
@@ -235,12 +238,20 @@ class PatternParser
     }
 
     /**
-     * Find all { ... } expressions in a pattern (single braces only).
+     * Find all {path} expressions in a pattern (single braces only).
+     *
+     * Matches valid replacement patterns like {key}, {path/to/value},
+     * {dcterms:title}, {état}. Does NOT match { value } (spaces) or
+     * {'key': 'val'} (JSON-style).
      */
     protected function findSingleBraceExpressions(string $pattern): array
     {
         $matches = [];
-        preg_match_all('/\{[^{}]+\}/', $pattern, $matches);
+        // Match {identifier} where identifier is a valid path.
+        // Starts with letter/underscore (unicode-aware), can contain letters,
+        // numbers, underscore, colon, dot, slash, hyphen.
+        // Uses \p{L} for unicode letters and \p{N} for unicode numbers.
+        preg_match_all('/\{[\p{L}_][\p{L}\p{N}_:.\\/\\-]*\}/u', $pattern, $matches);
         return $matches[0] ?? [];
     }
 
@@ -266,7 +277,7 @@ class PatternParser
     {
         // Remove the outer {{ }}.
         $inner = mb_substr($doubleBrace, 2, -2);
-        // Check for single braces that are not part of twig syntax.
-        return (bool) preg_match('/\{[^{|]+\}/', $inner);
+        // Check for valid replacement pattern {identifier} (unicode-aware).
+        return (bool) preg_match('/\{[\p{L}_][\p{L}\p{N}_:.\\/\\-]*\}/u', $inner);
     }
 }

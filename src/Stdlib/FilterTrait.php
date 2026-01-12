@@ -77,10 +77,26 @@ trait FilterTrait
             $value = '';
             $parts = array_filter(array_map('trim', explode('|', mb_substr((string) $expression, 3, -3))));
 
+            $isFirst = true;
             foreach ($parts as $part) {
-                $value = $hasReplaceExpr
-                    ? $this->processFilter($value, strtr($part, $replace))
-                    : $this->processFilter($value, $part);
+                if ($isFirst) {
+                    $isFirst = false;
+                    // First part is the value expression, not a filter.
+                    // If it's a replacement like {xxx}, resolve and use as value.
+                    // Otherwise look up in filterVars or use as literal.
+                    if ($hasReplaceExpr && preg_match('/^\{[^{}]+\}$/', $part)) {
+                        // It's a replacement expression like {xxx}.
+                        $value = $replace[$part] ?? '';
+                    } else {
+                        // It's a variable name or literal - use processFilter.
+                        $value = $this->processFilter($value, $part);
+                    }
+                } else {
+                    // Subsequent parts are filters - apply to current value.
+                    $value = $hasReplaceExpr
+                        ? $this->processFilter($value, strtr($part, $replace))
+                        : $this->processFilter($value, $part);
+                }
             }
 
             // Handle array results.

@@ -908,7 +908,8 @@ class Mapper
         );
 
         // If pattern is only replacements (no static text), consider it valid.
-        $staticText = trim(str_replace($allReplacements, '', $mod['pattern']));
+        // Use strtr() which replaces simultaneously, avoiding order issues.
+        $staticText = trim(strtr($mod['pattern'], array_fill_keys($allReplacements, '')));
         if (!strlen($staticText)) {
             return true;
         }
@@ -920,7 +921,7 @@ class Mapper
         }
 
         // Check if result differs from pattern with all replacements removed.
-        return str_replace($allReplacements, '', (string) $value) !== $result;
+        return strtr((string) $value, array_fill_keys($allReplacements, '')) !== $result;
     }
 
     /**
