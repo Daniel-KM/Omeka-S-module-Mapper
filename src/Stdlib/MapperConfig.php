@@ -492,7 +492,7 @@ class MapperConfig
     }
 
     /**
-     * Parse content string (ini or xml).
+     * Parse content string (ini, xml, or json).
      */
     protected function parseContent(string $content, array $options): array
     {
@@ -501,22 +501,175 @@ class MapperConfig
             return self::EMPTY_MAPPING;
         }
 
-        $mapping = mb_substr($content, 0, 1) === '<'
-            ? $this->parseXml($content, $options)
-            : $this->parseIni($content, $options);
+        $firstChar = mb_substr($content, 0, 1);
+
+        // XML format: starts with "<".
+        if ($firstChar === '<') {
+            $content = $this->processXmlIncludes($content, $options);
+            $mapping = $this->parseXml($content, $options);
+        }
+        // JSON object: starts with "{".
+        elseif ($firstChar === '{') {
+            $mapping = $this->parseJson($content, $options);
+        }
+        // Could be JSON array "[...]" or INI section "[section]".
+        // JSON arrays start with "[" followed by optional whitespace then "{", "[", "]", or a value.
+        // INI sections start with "[" followed by a word character.
+        elseif ($firstChar === '[') {
+            // Check second non-whitespace character to distinguish.
+            $afterBracket = ltrim(mb_substr($content, 1));
+            $secondChar = mb_substr($afterBracket, 0, 1);
+            // JSON array: next char is {, [, ], ", number, true/false/null.
+            if (in_array($secondChar, ['{', '[', ']', '"'], true)
+                || is_numeric($secondChar)
+                || preg_match('/^(true|false|null)/i', $afterBracket)
+            ) {
+                $mapping = $this->parseJson($content, $options);
+            } else {
+                // INI section: [section_name].
+                $mapping = $this->parseIni($content, $options);
+            }
+        }
+        // INI format: everything else.
+        else {
+            $mapping = $this->parseIni($content, $options);
+        }
 
         return $this->finalizeMapping($mapping);
     }
 
     /**
-     * Finalize a mapping by merging deprecated sections and normalizing structure.
+     * Parse JSON content into mapping structure.
+     */
+    protected function parseJson(string $content, array $options): array
+    {
+        $data = json_decode($content, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $this->logger->err(
+                'Invalid JSON in mapping "{name}": {error}',
+                ['name' => $this->currentName, 'error' => json_last_error_msg()]
+            );
+            return self::EMPTY_MAPPING;
+        }
+
+        // JSON can be a full mapping structure or just a list of maps.
+        if (isset($data['info']) || isset($data['maps']) || isset($data['params'])) {
+            return $this->parseNormalizedArray($data, $options);
+        }
+
+        // Assume it's a list of maps (array format from CopIdRef/BulkImport).
+        return $this->parseMapList($data, $options);
+    }
+
+    /**
+     * Process XML include directives.
+     *
+     * Replaces `<include mapping="file.xml"/>` with the content of the referenced file.
+     *
+     * @param string $content The XML content to process.
+     * @param array $options Parsing options.
+     * @param int $depth Current recursion depth.
+     * @param string|null $baseDir Base directory for resolving relative includes.
+     * @return string The processed XML content.
+     */
+    protected function processXmlIncludes(string $content, array $options, int $depth = 0, ?string $baseDir = null): string
+    {
+        // Prevent infinite recursion (max 10 levels).
+        if ($depth > 10) {
+            $this->logger->warn('XML include depth limit exceeded in mapping "{name}".', ['name' => $this->currentName]);
+            return $content;
+        }
+
+        // Determine base directory from current name if not provided.
+        if ($baseDir === null && $this->currentName) {
+            $baseDir = dirname($this->currentName);
+            if ($baseDir === '.') {
+                $baseDir = null;
+            }
+        }
+
+        // Find all <include mapping="..."/> elements.
+        $pattern = '/<include\s+mapping\s*=\s*["\']([^"\']+)["\']\s*\/>/i';
+        if (!preg_match_all($pattern, $content, $matches, PREG_SET_ORDER)) {
+            return $content;
+        }
+
+        foreach ($matches as $match) {
+            $includeTag = $match[0];
+            $includePath = $match[1];
+
+            // Resolve relative path if baseDir is set and path doesn't start with prefix.
+            $resolvedPath = $includePath;
+            if ($baseDir && strpos($includePath, ':') === false && strpos($includePath, '/') !== 0) {
+                $resolvedPath = $baseDir . '/' . $includePath;
+            }
+
+            // Load the included file content.
+            $includedContent = $this->loadMappingContent($resolvedPath);
+            if ($includedContent === null) {
+                $this->logger->warn(
+                    'Could not load included mapping "{file}" in "{name}".',
+                    ['file' => $resolvedPath, 'name' => $this->currentName]
+                );
+                // Remove the include tag.
+                $content = str_replace($includeTag, '', $content);
+                continue;
+            }
+
+            // Recursively process includes in the included file.
+            // Use the resolved path's directory as base for nested includes.
+            $nestedBaseDir = dirname($resolvedPath);
+            if ($nestedBaseDir === '.') {
+                $nestedBaseDir = $baseDir;
+            }
+            $includedContent = $this->processXmlIncludes($includedContent, $options, $depth + 1, $nestedBaseDir);
+
+            // Extract the inner content from the included file (strip <mapping> wrapper).
+            $innerContent = $this->extractXmlInnerContent($includedContent);
+
+            // Replace the include tag with the inner content.
+            $content = str_replace($includeTag, $innerContent, $content);
+        }
+
+        return $content;
+    }
+
+    /**
+     * Extract the inner content from an XML mapping file (strip outer <mapping> tags).
+     *
+     * @param string $content The full XML content.
+     * @return string The inner content (between <mapping> and </mapping>).
+     */
+    protected function extractXmlInnerContent(string $content): string
+    {
+        // Remove XML declaration if present.
+        $content = preg_replace('/<\?xml[^?]*\?>\s*/i', '', $content);
+
+        // Extract content between <mapping> and </mapping>.
+        if (preg_match('/<mapping[^>]*>(.*)<\/mapping>/is', $content, $match)) {
+            return trim($match[1]);
+        }
+
+        // If no <mapping> wrapper, return as-is (after stripping comments at root level).
+        return trim($content);
+    }
+
+    /**
+     * Finalize a mapping by merging inherited mappings and deprecated sections.
      *
      * This method:
+     * - Loads and merges base mapping if info.mapper is set (INI inheritance)
      * - Merges 'default' section into 'maps' (default is deprecated)
-     * - Logs a deprecation warning if 'default' section was used
+     * - Logs deprecation warnings as appropriate
+     *
+     * @param array $mapping The parsed mapping.
+     * @param array $inheritanceChain Names of mappings in the current chain (for recursion detection).
      */
-    protected function finalizeMapping(array $mapping): array
+    protected function finalizeMapping(array $mapping, array $inheritanceChain = []): array
     {
+        // Handle mapper inheritance (INI-style).
+        $mapping = $this->processMapperInheritance($mapping, $inheritanceChain);
+
         // Merge 'default' section into 'maps'.
         if (!empty($mapping[self::SECTION_DEFAULT])) {
             // Log deprecation warning for user awareness.
@@ -535,6 +688,137 @@ class MapperConfig
         }
 
         return $mapping;
+    }
+
+    /**
+     * Process mapper inheritance via the info.mapper key.
+     *
+     * When a mapping has info.mapper set, the referenced base mapping is loaded
+     * and merged with the current mapping. The current mapping's values take
+     * precedence over the base mapping's values.
+     *
+     * @param array $mapping The current mapping.
+     * @param array $inheritanceChain Names of mappings in the current chain.
+     * @return array The merged mapping.
+     */
+    protected function processMapperInheritance(array $mapping, array $inheritanceChain): array
+    {
+        $baseMapperRef = $mapping[self::SECTION_INFO]['mapper'] ?? null;
+        if (empty($baseMapperRef) || !is_string($baseMapperRef)) {
+            return $mapping;
+        }
+
+        // Normalize the reference (add base/ prefix if not present).
+        if (strpos($baseMapperRef, ':') === false && strpos($baseMapperRef, '/') === false) {
+            // Try to find the file with common extensions.
+            $baseMapperRef = 'base/' . $baseMapperRef;
+            if (!str_ends_with($baseMapperRef, '.ini') && !str_ends_with($baseMapperRef, '.xml')) {
+                $baseMapperRef .= '.ini';
+            }
+        }
+
+        // Skip if the base mapper is the same as the current file.
+        if ($baseMapperRef === $this->currentName) {
+            return $mapping;
+        }
+
+        // Check for circular inheritance.
+        if (in_array($baseMapperRef, $inheritanceChain)) {
+            $this->logger->warn(
+                'Circular inheritance detected in mapping "{name}": {chain}',
+                ['name' => $this->currentName, 'chain' => implode(' -> ', $inheritanceChain) . ' -> ' . $baseMapperRef]
+            );
+            return $mapping;
+        }
+
+        // Limit inheritance depth.
+        if (count($inheritanceChain) >= 10) {
+            $this->logger->warn(
+                'Mapper inheritance depth limit exceeded in mapping "{name}".',
+                ['name' => $this->currentName]
+            );
+            return $mapping;
+        }
+
+        // Load the base mapping content.
+        $baseContent = $this->loadMappingContent($baseMapperRef);
+        if ($baseContent === null) {
+            $this->logger->warn(
+                'Could not load base mapping "{base}" for "{name}".',
+                ['base' => $baseMapperRef, 'name' => $this->currentName]
+            );
+            return $mapping;
+        }
+
+        // Parse the base mapping (without storing it under a different name).
+        $baseContent = trim($baseContent);
+        if (!strlen($baseContent)) {
+            return $mapping;
+        }
+
+        // Process includes if XML.
+        if (mb_substr($baseContent, 0, 1) === '<') {
+            $baseContent = $this->processXmlIncludes($baseContent, [], 0, dirname($baseMapperRef));
+            $baseMapping = $this->parseXml($baseContent, []);
+        } else {
+            $baseMapping = $this->parseIni($baseContent, []);
+        }
+
+        // Recursively finalize the base mapping (handles nested inheritance).
+        $inheritanceChain[] = $baseMapperRef;
+        $baseMapping = $this->finalizeMapping($baseMapping, $inheritanceChain);
+
+        // Merge: base first, then current on top.
+        return $this->mergeMappings($baseMapping, $mapping);
+    }
+
+    /**
+     * Merge two mappings (base and current).
+     *
+     * Current mapping values take precedence over base mapping values.
+     * Maps are concatenated (base maps first, then current maps).
+     *
+     * @param array $base The base mapping.
+     * @param array $current The current mapping.
+     * @return array The merged mapping.
+     */
+    protected function mergeMappings(array $base, array $current): array
+    {
+        $merged = self::EMPTY_MAPPING;
+
+        // Info: current overrides base (except for null values).
+        $merged[self::SECTION_INFO] = array_filter($current[self::SECTION_INFO] ?? [], fn($v) => $v !== null)
+            + array_filter($base[self::SECTION_INFO] ?? [], fn($v) => $v !== null)
+            + self::EMPTY_MAPPING[self::SECTION_INFO];
+
+        // Params: current overrides base.
+        $merged[self::SECTION_PARAMS] = array_merge(
+            $base[self::SECTION_PARAMS] ?? [],
+            $current[self::SECTION_PARAMS] ?? []
+        );
+
+        // Tables: deep merge, current overrides base.
+        $merged[self::SECTION_TABLES] = array_replace_recursive(
+            $base[self::SECTION_TABLES] ?? [],
+            $current[self::SECTION_TABLES] ?? []
+        );
+
+        // Maps: concatenate (base first, then current).
+        $merged[self::SECTION_MAPS] = array_merge(
+            $base[self::SECTION_MAPS] ?? [],
+            $current[self::SECTION_MAPS] ?? []
+        );
+
+        // Default: concatenate (will be merged into maps later).
+        $merged[self::SECTION_DEFAULT] = array_merge(
+            $base[self::SECTION_DEFAULT] ?? [],
+            $current[self::SECTION_DEFAULT] ?? []
+        );
+
+        // Preserve error flag from current.
+        $merged['has_error'] = $current['has_error'] ?? $base['has_error'] ?? false;
+
+        return $merged;
     }
 
     /**
