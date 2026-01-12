@@ -1101,10 +1101,14 @@ class MapperConfig
             return $mapping;
         }
 
-        // Normalize the reference (add base/ prefix if not present).
-        if (strpos($baseMapperRef, ':') === false && strpos($baseMapperRef, '/') === false) {
-            // Try to find the file with common extensions.
-            $baseMapperRef = 'base/' . $baseMapperRef;
+        // Normalize the reference.
+        // Database references (mapper:5) or prefixed references (module:path) are kept as-is.
+        if (strpos($baseMapperRef, ':') === false) {
+            // Add default folder prefix if not present (for backward compatibility).
+            if (strpos($baseMapperRef, '/') === false) {
+                $baseMapperRef = 'base/' . $baseMapperRef;
+            }
+            // Add extension if not present.
             if (!str_ends_with($baseMapperRef, '.ini') && !str_ends_with($baseMapperRef, '.xml')) {
                 $baseMapperRef .= '.ini';
             }

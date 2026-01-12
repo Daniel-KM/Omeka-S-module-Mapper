@@ -124,13 +124,23 @@ class MapperConfigList extends AbstractPlugin
         static $internalMappings;
 
         if ($internalMappings === null) {
+            // Search for all mapping files in the reorganized folder structure.
+            // Folders are organized by data source type.
             $internalMappings = $this->listMappings([
-                ['base' => 'ini'],
-                ['base' => 'xml'],
-                ['json' => 'ini'],
-                ['json' => 'xml'],
-                ['xml' => 'ini'],
-                ['xml' => 'xml'],
+                // INI format mappings.
+                ['content-dm' => 'ini'],
+                ['file' => 'ini'],
+                ['iiif' => 'ini'],
+                // XML format mappings.
+                ['ead' => 'xml'],
+                ['idref' => 'xml'],
+                ['lido' => 'xml'],
+                ['unimarc' => 'xml'],
+                // JSON format mappings (for IdRef).
+                ['idref' => 'json'],
+                // XSL transformations.
+                ['xsl' => 'xsl'],
+                ['xsl' => 'xml'],
             ])['module']['options'];
         }
 
