@@ -44,6 +44,7 @@
 namespace Mapper\Stdlib;
 
 use Common\Stdlib\EasyMeta;
+use Omeka\Api\Manager as ApiManager;
 
 class MapNormalizer
 {
@@ -175,6 +176,11 @@ class MapNormalizer
     ];
 
     /**
+     * @var ApiManager
+     */
+    protected $api;
+
+    /**
      * @var EasyMeta
      */
     protected $easyMeta;
@@ -184,8 +190,14 @@ class MapNormalizer
      */
     protected ?string $defaultQuerier = null;
 
-    public function __construct(EasyMeta $easyMeta)
+    /**
+     * Cached custom vocab labels to IDs.
+     */
+    protected ?array $customVocabLabels = null;
+
+    public function __construct(ApiManager $api, EasyMeta $easyMeta)
     {
+        $this->api = $api;
         $this->easyMeta = $easyMeta;
     }
 
@@ -600,7 +612,7 @@ class MapNormalizer
         }
 
         if (!empty($datatypes)) {
-            $result['datatype'] = $datatypes;
+            $result['datatype'] = $this->normalizeDatatypes($datatypes);
         }
 
         // Resolve property ID.
@@ -666,7 +678,8 @@ class MapNormalizer
 
             // Qualifiers (stored in 'to').
             if (!empty($to['datatype'])) {
-                $result['to']['datatype'] = explode(' ', (string) $to['datatype']);
+                $datatypes = explode(' ', (string) $to['datatype']);
+                $result['to']['datatype'] = $this->normalizeDatatypes($datatypes);
             }
             if (!empty($to['language'])) {
                 $result['to']['language'] = (string) $to['language'];
@@ -763,9 +776,15 @@ class MapNormalizer
             $to = $map['to'];
             $result['to']['field'] = $to['field'] ?? null;
             $result['to']['property_id'] = $to['property_id'] ?? null;
-            $result['to']['datatype'] = $to['datatype'] ?? null;
             $result['to']['language'] = $to['language'] ?? null;
             $result['to']['is_public'] = $to['is_public'] ?? null;
+            // Normalize datatypes.
+            if (!empty($to['datatype'])) {
+                $datatypes = is_array($to['datatype'])
+                    ? $to['datatype']
+                    : [$to['datatype']];
+                $result['to']['datatype'] = $this->normalizeDatatypes($datatypes);
+            }
         }
 
         // Convert 'mod'.
@@ -783,5 +802,86 @@ class MapNormalizer
         }
 
         return $result;
+    }
+
+    /**
+     * Normalize datatypes, resolving custom vocab labels to IDs.
+     *
+     * @param array $datatypes List of datatype strings.
+     * @return array Normalized datatypes.
+     */
+    protected function normalizeDatatypes(array $datatypes): array
+    {
+        $result = [];
+        foreach ($datatypes as $datatype) {
+            if (strpos($datatype, 'customvocab:') === 0) {
+                $datatype = $this->resolveCustomVocabDatatype($datatype);
+            }
+            $normalized = $this->easyMeta->dataTypeName($datatype);
+            if ($normalized !== null) {
+                $result[] = $normalized;
+            } else {
+                $result[] = $datatype;
+            }
+        }
+        return array_values(array_unique(array_filter($result)));
+    }
+
+    /**
+     * Resolve custom vocab datatype with label to ID.
+     *
+     * Converts "customvocab:'My List'" or 'customvocab:"My List"' to
+     * "customvocab:123".
+     */
+    protected function resolveCustomVocabDatatype(string $datatype): string
+    {
+        $suffix = substr($datatype, 12);
+
+        // Already an ID.
+        if (is_numeric($suffix)) {
+            return $datatype;
+        }
+
+        // Extract label from quotes.
+        $first = mb_substr($suffix, 0, 1);
+        $last = mb_substr($suffix, -1);
+        if (($first === '"' && $last === '"')
+            || ($first === "'" && $last === "'")
+        ) {
+            $label = mb_substr($suffix, 1, -1);
+        } else {
+            $label = $suffix;
+        }
+
+        // Lookup custom vocab ID by label.
+        if ($this->customVocabLabels === null) {
+            $this->loadCustomVocabLabels();
+        }
+
+        $id = $this->customVocabLabels[$label] ?? null;
+        if ($id !== null) {
+            return 'customvocab:' . $id;
+        }
+
+        return $datatype;
+    }
+
+    /**
+     * Load custom vocab labels to IDs mapping.
+     */
+    protected function loadCustomVocabLabels(): void
+    {
+        $this->customVocabLabels = [];
+
+        try {
+            $customVocabs = $this->api
+                ->search('custom_vocabs', [], ['responseContent' => 'resource'])
+                ->getContent();
+            foreach ($customVocabs as $customVocab) {
+                $this->customVocabLabels[$customVocab->getLabel()] = $customVocab->getId();
+            }
+        } catch (\Exception $e) {
+            // Custom vocab module not installed.
+        }
     }
 }
