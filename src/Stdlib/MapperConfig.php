@@ -1317,20 +1317,7 @@ class MapperConfig
     protected function parseIniLine(string $line, string $section, array $options): ?array
     {
         // Find the equals sign that separates source from destination.
-        // For maps, if line starts with "~", look for first "=" after it.
-        // Otherwise, find "=" before the first "~" (which starts a pattern).
-        $tildePos = mb_strpos($line, '~');
-
-        if ($tildePos === 0) {
-            // Line starts with "~" (default map) - find first "=" after it.
-            $equalsPos = mb_strpos($line, '=');
-        } elseif ($tildePos !== false) {
-            // Line has "~" later (pattern) - find "=" before the tilde.
-            $equalsPos = mb_strpos(mb_substr($line, 0, $tildePos), '=');
-        } else {
-            // No tilde - find last "=" in line.
-            $equalsPos = mb_strrpos($line, '=');
-        }
+        $equalsPos = $this->findSeparatorEquals($line);
 
         if ($equalsPos === false) {
             return null;
@@ -1362,6 +1349,61 @@ class MapperConfig
 
         $options['section'] = $section;
         return $this->normalizeMapFromIniParts($from, $to, $options);
+    }
+
+    /**
+     * Find the equals sign separating source from destination in an INI line.
+     *
+     * This method correctly handles XPath predicates with "=" inside brackets,
+     * e.g., //datafield[@tag="200"]/subfield[@code="a"] = dcterms:title
+     *
+     * @return int|false Position of separator "=" or false if not found.
+     *
+     * @todo Clarify the convention to separate left from right.
+     */
+    protected function findSeparatorEquals(string $line)
+    {
+        $length = mb_strlen($line);
+        $bracketDepth = 0;
+        $inSingleQuote = false;
+        $inDoubleQuote = false;
+        $lastEqualsOutsideBrackets = false;
+
+        for ($i = 0; $i < $length; $i++) {
+            $char = mb_substr($line, $i, 1);
+
+            // Track quote state (to handle quoted strings with brackets).
+            if ($char === "'" && !$inDoubleQuote) {
+                $inSingleQuote = !$inSingleQuote;
+                continue;
+            }
+            if ($char === '"' && !$inSingleQuote) {
+                $inDoubleQuote = !$inDoubleQuote;
+                continue;
+            }
+
+            // Skip characters inside quotes.
+            if ($inSingleQuote || $inDoubleQuote) {
+                continue;
+            }
+
+            // Track bracket depth for XPath predicates.
+            if ($char === '[') {
+                $bracketDepth++;
+                continue;
+            }
+            if ($char === ']') {
+                $bracketDepth = max(0, $bracketDepth - 1);
+                continue;
+            }
+
+            // Found "=" outside brackets - this is a potential separator.
+            if ($char === '=' && $bracketDepth === 0) {
+                $lastEqualsOutsideBrackets = $i;
+            }
+        }
+
+        return $lastEqualsOutsideBrackets;
     }
 
     /**
