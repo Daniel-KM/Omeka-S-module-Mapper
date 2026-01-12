@@ -4,7 +4,9 @@ namespace Mapper\Service\Stdlib;
 
 use Interop\Container\ContainerInterface;
 use Laminas\ServiceManager\Factory\FactoryInterface;
+use Mapper\Stdlib\MapNormalizer;
 use Mapper\Stdlib\MapperConfig;
+use Mapper\Stdlib\PatternParser;
 
 class MapperConfigFactory implements FactoryInterface
 {
@@ -14,7 +16,9 @@ class MapperConfigFactory implements FactoryInterface
             $services->get('Omeka\ApiManager'),
             $services->get('Common\EasyMeta'),
             $services->get('Omeka\Logger'),
-            $services->get('Config')['file_store']['local']['base_path'] ?: (OMEKA_PATH . '/files')
+            $services->get('Config')['file_store']['local']['base_path'] ?: (OMEKA_PATH . '/files'),
+            $services->get(MapNormalizer::class),
+            $services->get(PatternParser::class)
         );
     }
 }

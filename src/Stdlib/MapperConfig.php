@@ -5,6 +5,40 @@
  *
  * Supports ini-style text, xml, and array formats for mapping definitions.
  *
+ * ## Mapping Structure
+ *
+ * A mapping configuration has two levels of "sections":
+ *
+ * ### Level 1: Mapping Sections (top-level structure)
+ *
+ * ```
+ * [info]      → Metadata: label, from, to, querier, mapper, example
+ * [params]    → Configuration parameters (key-value pairs)
+ * [default]   → Default maps applied to all resources
+ * [maps]      → Actual mapping rules (array of maps)
+ * [tables]    → Lookup tables for value conversions
+ * ```
+ *
+ * ### Level 2: Map Parts (structure of each map in 'default' or 'maps')
+ *
+ * ```
+ * [from]  → Source: where data comes from (path, querier, index)
+ * [to]    → Target: where data goes (field, property_id, datatype, language, is_public)
+ * [mod]   → Modifiers: how to transform data (raw, val, pattern, prepend, append)
+ * ```
+ *
+ * ### Example INI format:
+ *
+ * ```ini
+ * [info]
+ * label = "My Mapping"
+ * querier = xpath
+ *
+ * [maps]
+ * //title = dcterms:title ^^literal @fra
+ * //creator = dcterms:creator ~ {{ value|trim }}
+ * ```
+ *
  * @copyright Daniel Berthereau, 2017-2026
  * @license http://www.cecill.info/licences/Licence_CeCILL_V2.1-en.txt
  */
@@ -17,64 +51,170 @@ use Omeka\Api\Manager as ApiManager;
 
 class MapperConfig
 {
+    // =========================================================================
+    // Mapping Section Constants (Level 1: top-level sections of a mapping)
+    // =========================================================================
+
     /**
-     * @var \Omeka\Api\Manager
+     * Metadata section: label, from, to, querier, mapper, example.
+     * Stores key-value pairs describing the mapping.
+     */
+    public const SECTION_INFO = 'info';
+
+    /**
+     * Parameters section: configuration values for the mapping.
+     * Stores key-value pairs for custom settings.
+     */
+    public const SECTION_PARAMS = 'params';
+
+    /**
+     * Default maps section: maps applied when creating any resource.
+     * Contains an array of map definitions (without source paths).
+     */
+    public const SECTION_DEFAULT = 'default';
+
+    /**
+     * Maps section: the actual mapping rules.
+     * Contains an array of map definitions (with source paths).
+     */
+    public const SECTION_MAPS = 'maps';
+
+    /**
+     * Tables section: lookup tables for value conversions.
+     * Contains nested associative arrays indexed by table name.
+     */
+    public const SECTION_TABLES = 'tables';
+
+    /**
+     * All valid mapping section names.
+     */
+    public const MAPPING_SECTIONS = [
+        self::SECTION_INFO,
+        self::SECTION_PARAMS,
+        self::SECTION_DEFAULT,
+        self::SECTION_MAPS,
+        self::SECTION_TABLES,
+    ];
+
+    /**
+     * Sections that contain arrays of maps.
+     */
+    public const MAP_SECTIONS = [
+        self::SECTION_DEFAULT,
+        self::SECTION_MAPS,
+    ];
+
+    /**
+     * Sections that contain key-value pairs.
+     */
+    public const KEYVALUE_SECTIONS = [
+        self::SECTION_INFO,
+        self::SECTION_PARAMS,
+    ];
+
+    // =========================================================================
+    // Map Part Constants (Level 2: parts of each individual map)
+    // =========================================================================
+
+    /**
+     * Source part: defines where data comes from.
+     * Keys: path, querier, index.
+     */
+    public const MAP_FROM = 'from';
+
+    /**
+     * Target part: defines where data goes.
+     * Keys: field, property_id, datatype, language, is_public.
+     */
+    public const MAP_TO = 'to';
+
+    /**
+     * Modifier part: defines how to transform data.
+     *
+     * Input keys: raw, pattern, prepend, append.
+     * Computed keys (from PatternParser): replace, twig, twig_has_replace.
+     *
+     * Note: 'val' is accepted as input but normalized to 'raw'.
+     */
+    public const MAP_MOD = 'mod';
+
+    /**
+     * All map parts.
+     */
+    public const MAP_PARTS = [
+        self::MAP_FROM,
+        self::MAP_TO,
+        self::MAP_MOD,
+    ];
+
+    // =========================================================================
+    // Dependencies
+    // =========================================================================
+
+    /**
+     * @var ApiManager
      */
     protected $api;
 
     /**
-     * @var \Common\Stdlib\EasyMeta
+     * @var EasyMeta
      */
     protected $easyMeta;
 
     /**
-     * @var \Laminas\Log\Logger
+     * @var Logger
      */
     protected $logger;
 
     /**
      * Base path for user files.
-     *
-     * @var string
      */
-    protected $basePath;
+    protected string $basePath;
+
+    /**
+     * @var MapNormalizer
+     */
+    protected $mapNormalizer;
+
+    /**
+     * @var PatternParser
+     */
+    protected $patternParser;
 
     /**
      * Cache for parsed mappings.
-     *
-     * @var array
      */
-    protected $mappings = [];
+    protected array $mappings = [];
 
     /**
      * Current mapping name.
-     *
-     * @var string|null
      */
-    protected $currentName;
+    protected ?string $currentName = null;
 
     /**
      * Empty mapping template.
+     *
+     * Structure:
+     * - info: Metadata about the mapping
+     * - params: Configuration parameters
+     * - default: Default maps (no source path)
+     * - maps: Mapping rules (with source paths)
+     * - tables: Lookup tables
+     * - has_error: Error flag
      */
     protected const EMPTY_MAPPING = [
-        'info' => [
-            // Label is the only required data.
+        self::SECTION_INFO => [
             'label' => null,
             'from' => null,
             'to' => null,
-            // xpath, jsonpath, jsdot, jmespath or index.
-            // Index is used for simple array, like a spreadsheet header.
             'querier' => null,
-            // Used by ini for json. In xml, include can be used.
             'mapper' => null,
             'example' => null,
         ],
-        'params' => [],
-        // TODO Merge default and maps by a setting in the maps.
-        'default' => [],
-        'maps' => [],
-        // List of tables (associative arrays) indexed by their name.
-        'tables' => [],
+        self::SECTION_PARAMS => [],
+        self::SECTION_DEFAULT => [],
+        self::SECTION_MAPS => [],
+        self::SECTION_TABLES => [],
         'has_error' => false,
     ];
 
@@ -82,133 +222,25 @@ class MapperConfig
         ApiManager $api,
         EasyMeta $easyMeta,
         Logger $logger,
-        string $basePath
+        string $basePath,
+        MapNormalizer $mapNormalizer,
+        PatternParser $patternParser
     ) {
         $this->api = $api;
         $this->easyMeta = $easyMeta;
         $this->logger = $logger;
         $this->basePath = $basePath;
+        $this->mapNormalizer = $mapNormalizer;
+        $this->patternParser = $patternParser;
     }
 
     /**
      * Load and parse a mapping configuration.
      *
-     * It can be used as headers of a spreadsheet, or in an import mapping, or
-     * to extract metadata from files json, or xml files, or for any file.
-     * It contains a list of mappings between source data and destination data.
-     *
-     * A mapping contains four sections:
-     * - info: label, base mapper if any, querier to use, example of source;
-     * - params: what to import (metadata or files) and constants;
-     * - default: default maps when creating resources, for example the owner;
-     * - maps: the maps to use for the import.
-     * Some other sections are available (passed options, tables, has_error).
-     *
-     * Each map is based on a source and a destination, eventually modified.
-     * So the internal representation of the maps is:
-     *
-     * ```php
-     * [
-     *     [
-     *          'from' => [
-     *              'querier' => 'xpath',
-     *              'path' => '/record/datafield[@tag='200'][@ind1='1']/subfield[@code='a']',
-     *          ],
-     *          'to' => [
-     *              'field' => 'dcterms:title',
-     *              'property_id' => 1,
-     *              'datatype' => [
-     *                  'literal',
-     *              ],
-     *              'language' => 'fra',
-     *              'is_public' => false,
-     *          ],
-     *          'mod' => [
-     *              'raw' => null,
-     *              'val' => null,
-     *              'prepend' => 'Title is: ',
-     *              'pattern' => 'pattern for {{ value|trim }} with {{/source/record/data}}',
-     *              'append' => null,
-     *              'replace' => [
-     *                  '{{/source/record/data}}',
-     *              ],
-     *              'twig' => [
-     *                  '{{ value|trim }}',
-     *              ],
-     *          ],
-     *      ],
-     * ]
-     * ```
-     *
-     * Such a mapping can be created from an array, a list of fields (for
-     * example headers of a spreadsheet), an ini-like or xml file, or stored in
-     * database as ini-like or xml. It can be based on another mapping.
-     *
-     * For example, the ini map for the map above is (except prepend/append,
-     * that should be included in pattern):
-     *
-     * ```
-     * /record/datafield[@tag='200'][@ind1='1']/subfield[@code='a'] = dcterms:title @fra ^^literal §public ~ pattern for {{ value|trim }} with {{/source/record/data}}
-     * ```
-     *
-     * The same mapping for the xml is:
-     *
-     * ```xml
-     * <mapping>
-     *     <map>
-     *         <from xpath="/record/datafield[@tag='200']/subfield[@code='a']"/>
-     *         <to field="dcterms:title" language="fra" datatype="literal" visibility="public"/>
-     *         <mod prepend="Title is: " pattern="pattern for {{ value|trim }} with {{/source/record/data}}"/>
-     *     </map>
-     * </mapping>
-     * ```
-     *
-     * The default querier is to take the value provided by the reader.
-     *
-     * "mod/raw" is the raw value set in all cases, even without source value.
-     * "mod/val" is the raw value set only when "from" is a value, that may be
-     * extracted with a path.
-     * "mod/prepend" and "mod/append" are used only when the pattern returns a
-     * value with at least one replacement. So a pattern without replacements
-     * (simple or twig) should be a "val".
-     *
-     * Note that a ini mapping has a static querier (the same for all maps), but
-     * a xml mapping has a dynamic querier (set as attribute of element "from").
-     *
-     * For more information and formats: see {@link https://gitlab.com/Daniel-KM/Omeka-S-module-BulkImport}.
-     *
-     * The mapping should contain some infos about the mapping itself in section
-     * "info", some params if needed, and tables or reference to tables.
-     *
-     * @todo Merge default and maps by a setting in the maps.
-     *
-     * The mapping is not overridable once built, even if options are different.
-     * If needed, another name should be used.
-     *
-     * @todo Remove options and use mapping only, that may contain info, params and tables.
-     *
-     * @param string $mappingName The name of the mapping to get or to set.
-     * @param array|string|null $mappingOrMappingReference Full mapping or
-     *   reference file or name or array.
+     * @param string|null $name The name of the mapping.
+     * @param array|string|null $mappingOrRef Full mapping or reference.
      * @param array $options Parsing options.
-     * // To be removed: part of the main mapping.
-     * - section_types (array): way to manage the sections of the mapping.
-     * - tables (array): tables to use for some maps with conversion.
-     * // To be removed: Only used by spreadsheet.
-     * - infos
-     * - label
-     * - params
-     * - default
-     * // To be removed: For automap a single string.
-     * - check_field (bool)
-     * - output_full_matches (bool)
-     * - output_property_id (bool)
-     * // To be removed?
-     * - resource_name (string) : same as info[to]
-     * - field_types (array) : Field types of a resource from the processor.
-     * // Tempo fix to be removed with new manual form.
-     * - is_single_manual (bool): should prepare mapping with full data from keys.
-     * @return self|array Returns self for chaining, or the parsed mapping if $name is set.
+     * @return self|array Returns self for chaining, or the parsed mapping.
      */
     public function __invoke(?string $name = null, $mappingOrRef = null, array $options = [])
     {
@@ -216,7 +248,6 @@ class MapperConfig
             return $this;
         }
 
-        // Generate name from content if not provided.
         if ($name === null && $mappingOrRef !== null) {
             $name = $this->generateNameFromReference($mappingOrRef);
         }
@@ -227,7 +258,6 @@ class MapperConfig
             return $this->getMapping($name);
         }
 
-        // Only parse if not already cached.
         if (!isset($this->mappings[$name])) {
             $this->parseAndStore($mappingOrRef, $options);
         }
@@ -237,8 +267,6 @@ class MapperConfig
 
     /**
      * Get a parsed mapping by name.
-     *
-     * @todo Recusively merge mappings.
      */
     public function getMapping(?string $name = null): ?array
     {
@@ -273,10 +301,9 @@ class MapperConfig
             return $default;
         }
 
-        // For maps sections, search by 'from' path.
-        if (in_array($section, ['default', 'maps'])) {
+        if (in_array($section, self::MAP_SECTIONS)) {
             foreach ($mapping[$section] as $map) {
-                if ($name === ($map['from']['path'] ?? null)) {
+                if ($name === ($map[self::MAP_FROM]['path'] ?? null)) {
                     return $map;
                 }
             }
@@ -305,6 +332,8 @@ class MapperConfig
 
     /**
      * Normalize a list of maps.
+     *
+     * Delegates to MapNormalizer when available.
      */
     public function normalizeMaps(array $maps, array $options = []): array
     {
@@ -317,13 +346,12 @@ class MapperConfig
             $options['index'] = $index;
 
             if (empty($map)) {
-                $result[] = ['from' => [], 'to' => [], 'mod' => []];
+                $result[] = [self::MAP_FROM => [], self::MAP_TO => [], self::MAP_MOD => []];
                 continue;
             }
 
             $normalized = $this->normalizeMap($map, $options);
 
-            // A single map can expand to multiple maps.
             if (!empty($normalized) && is_numeric(key($normalized))) {
                 foreach ($normalized as $item) {
                     $result[] = $item;
@@ -338,11 +366,13 @@ class MapperConfig
 
     /**
      * Normalize a single map from various input formats.
+     *
+     * Uses MapNormalizer for the heavy lifting, then converts to legacy format.
      */
     public function normalizeMap($map, array $options = []): array
     {
         if (empty($map)) {
-            return ['from' => [], 'to' => [], 'mod' => []];
+            return [self::MAP_FROM => [], self::MAP_TO => [], self::MAP_MOD => []];
         }
 
         if (is_string($map)) {
@@ -350,14 +380,13 @@ class MapperConfig
         }
 
         if (is_array($map)) {
-            // Handle array of maps recursively.
             if (is_numeric(key($map))) {
                 return array_map(fn($m) => $this->normalizeMap($m, $options), $map);
             }
             return $this->normalizeMapFromArray($map, $options);
         }
 
-        return ['from' => [], 'to' => [], 'mod' => [], 'has_error' => true];
+        return [self::MAP_FROM => [], self::MAP_TO => [], self::MAP_MOD => [], 'has_error' => true];
     }
 
     /**
@@ -390,27 +419,18 @@ class MapperConfig
     }
 
     /**
-     * Generate the default unique name from a mapping reference.
-     *
-     * Use the filename for file-based references or md5 hash for array content.
+     * Generate a name from a mapping reference.
      */
     protected function generateNameFromReference($mappingOrRef): string
     {
-        // For string references, use the reference itself as name.
-        // This covers file references like "module:xml/idref_personne.xml"
-        // and database references like "mapping:5".
         if (is_string($mappingOrRef)) {
             return $mappingOrRef;
         }
-
-        // For array content, fall back to md5 hash.
         return md5(serialize($mappingOrRef));
     }
 
     /**
-     * Load mapping content from a reference (file path, database ID, etc.).
-     *
-     * Also supports passing raw content (INI or XML) directly.
+     * Load mapping content from a reference.
      */
     protected function loadMappingContent(string $reference): ?string
     {
@@ -431,7 +451,6 @@ class MapperConfig
             'module' => dirname(__DIR__, 2) . '/data/mapping/',
         ];
 
-        // Check if reference is a file path with known prefix.
         $isFileReference = false;
         if (strpos($reference, ':') !== false) {
             $prefix = strtok($reference, ':');
@@ -446,8 +465,7 @@ class MapperConfig
             }
         }
 
-        // Not a file reference - check if it looks like raw content (INI or XML).
-        // XML starts with '<', INI usually contains '[' section markers or '=' assignments.
+        // Check for raw content (INI or XML).
         $trimmed = trim($reference);
         if (strlen($trimmed) > 10 && (
             mb_substr($trimmed, 0, 1) === '<' ||
@@ -455,11 +473,10 @@ class MapperConfig
             strpos($trimmed, ' = ') !== false ||
             strpos($trimmed, "\n") !== false
         )) {
-            // Looks like raw content, return as-is.
             return $trimmed;
         }
 
-        // Try as module file reference without prefix.
+        // Try as module file without prefix.
         $filepath = $prefixes['module'] . $reference;
         if (file_exists($filepath) && is_readable($filepath)) {
             return trim((string) file_get_contents($filepath));
@@ -489,21 +506,22 @@ class MapperConfig
     protected function parseIni(string $content, array $options): array
     {
         $mapping = self::EMPTY_MAPPING;
-        $mapping['info']['label'] = $this->currentName;
+        $mapping[self::SECTION_INFO]['label'] = $this->currentName;
 
         $lines = array_filter(array_map('trim', explode("\n", $content)));
         $section = null;
 
+        // Set default querier for MapNormalizer.
+        $defaultQuerier = null;
+
         foreach ($lines as $line) {
-            // Skip comments.
             if (mb_substr($line, 0, 1) === ';') {
                 continue;
             }
 
-            // Section header.
             if (mb_substr($line, 0, 1) === '[' && mb_substr($line, -1) === ']') {
                 $section = trim(mb_substr($line, 1, -1));
-                if (!in_array($section, ['info', 'params', 'default', 'maps', 'tables'])) {
+                if (!in_array($section, self::MAPPING_SECTIONS)) {
                     $section = null;
                 }
                 continue;
@@ -513,24 +531,24 @@ class MapperConfig
                 continue;
             }
 
-            // Parse key = value.
             $map = $this->parseIniLine($line, $section, $options);
             if ($map === null) {
                 continue;
             }
 
-            // For info/params/tables, store as key-value.
-            if (in_array($section, ['info', 'params'])) {
-                if (isset($map['from']) && is_scalar($map['from'])) {
-                    $mapping[$section][$map['from']] = $map['to'];
+            if (in_array($section, self::KEYVALUE_SECTIONS)) {
+                if (isset($map[self::MAP_FROM]) && is_scalar($map[self::MAP_FROM])) {
+                    $mapping[$section][$map[self::MAP_FROM]] = $map[self::MAP_TO];
+                    // Capture querier for later use.
+                    if ($section === self::SECTION_INFO && $map[self::MAP_FROM] === 'querier') {
+                        $defaultQuerier = $map[self::MAP_TO];
+                    }
                 }
-            } elseif ($section === 'tables') {
-                // Tables have nested structure.
-                if (isset($map['from']) && isset($map['to'])) {
-                    $mapping['tables'][$map['from']][$map['key'] ?? ''] = $map['to'];
+            } elseif ($section === self::SECTION_TABLES) {
+                if (isset($map[self::MAP_FROM]) && isset($map[self::MAP_TO])) {
+                    $mapping[self::SECTION_TABLES][$map[self::MAP_FROM]][$map['key'] ?? ''] = $map[self::MAP_TO];
                 }
             } else {
-                // For default/maps, store as array of maps.
                 $mapping[$section][] = $map;
             }
         }
@@ -543,7 +561,6 @@ class MapperConfig
      */
     protected function parseIniLine(string $line, string $section, array $options): ?array
     {
-        // Find the = separator (handle patterns with = after ~).
         $tildePos = mb_strpos($line, '~');
         $equalsPos = $tildePos !== false
             ? mb_strpos(mb_substr($line, 0, $tildePos), '=')
@@ -560,18 +577,15 @@ class MapperConfig
             return null;
         }
 
-        // Simple key-value for info/params.
-        if (in_array($section, ['info', 'params'])) {
-            // Remove quotes if present.
+        if (in_array($section, self::KEYVALUE_SECTIONS)) {
             if ((mb_substr($to, 0, 1) === '"' && mb_substr($to, -1) === '"')
                 || (mb_substr($to, 0, 1) === "'" && mb_substr($to, -1) === "'")
             ) {
                 $to = mb_substr($to, 1, -1);
             }
-            return ['from' => $from, 'to' => $to];
+            return [self::MAP_FROM => $from, self::MAP_TO => $to];
         }
 
-        // For default/maps, normalize the full map.
         $options['section'] = $section;
         return $this->normalizeMapFromIniParts($from, $to, $options);
     }
@@ -581,21 +595,21 @@ class MapperConfig
      */
     protected function normalizeMapFromIniParts(string $from, string $to, array $options): array
     {
-        $map = ['from' => [], 'to' => [], 'mod' => []];
+        $map = [self::MAP_FROM => [], self::MAP_TO => [], self::MAP_MOD => []];
 
         // Check if "to" is a raw value (quoted).
         $isRaw = (mb_substr($to, 0, 1) === '"' && mb_substr($to, -1) === '"')
             || (mb_substr($to, 0, 1) === "'" && mb_substr($to, -1) === "'");
 
         if ($isRaw) {
-            $map['mod']['raw'] = mb_substr($to, 1, -1);
-            $map['to'] = $this->parseFieldSpec($from);
+            $map[self::MAP_MOD]['raw'] = mb_substr($to, 1, -1);
+            $map[self::MAP_TO] = $this->parseFieldSpec($from);
             return $map;
         }
 
         // Set source path if not empty or tilde.
         if ($from !== '~' && $from !== '') {
-            $map['from']['path'] = $from;
+            $map[self::MAP_FROM]['path'] = $from;
         }
 
         // Parse destination with optional pattern.
@@ -604,10 +618,10 @@ class MapperConfig
             $fieldPart = trim(mb_substr($to, 0, $tildePos));
             $patternPart = trim(mb_substr($to, $tildePos + 1));
 
-            $map['to'] = $this->parseFieldSpec($fieldPart);
-            $map['mod'] = $this->parsePattern($patternPart);
+            $map[self::MAP_TO] = $this->parseFieldSpec($fieldPart);
+            $map[self::MAP_MOD] = $this->parsePattern($patternPart);
         } else {
-            $map['to'] = $this->parseFieldSpec($to);
+            $map[self::MAP_TO] = $this->parseFieldSpec($to);
         }
 
         return $map;
@@ -632,32 +646,25 @@ class MapperConfig
             return $result;
         }
 
-        // Extract pattern (~ ...) if present at the end.
         $tildePos = mb_strpos($spec, '~');
         if ($tildePos !== false) {
             $spec = trim(mb_substr($spec, 0, $tildePos));
         }
 
-        // Parse parts separated by spaces.
         $parts = preg_split('/\s+/', $spec);
         foreach ($parts as $part) {
             if (mb_substr($part, 0, 2) === '^^') {
-                // Datatype.
                 $result['datatype'][] = mb_substr($part, 2);
             } elseif (mb_substr($part, 0, 1) === '@') {
-                // Language.
                 $result['language'] = mb_substr($part, 1);
             } elseif (mb_substr($part, 0, 1) === '§') {
-                // Visibility.
                 $visibility = mb_strtolower(mb_substr($part, 1));
                 $result['is_public'] = $visibility !== 'private';
             } elseif ($result['field'] === null) {
-                // First non-prefixed part is the field.
                 $result['field'] = $part;
             }
         }
 
-        // Add property_id if field is a property term.
         if ($result['field']) {
             $propertyId = $this->easyMeta->propertyId($result['field']);
             if ($propertyId) {
@@ -673,56 +680,13 @@ class MapperConfig
      */
     protected function parsePattern(string $pattern): array
     {
-        $result = [
-            'pattern' => $pattern,
-            'replace' => [],
-            'twig' => [],
-            'twig_has_replace' => [],
+        $parsed = $this->patternParser->parse($pattern);
+        return [
+            'pattern' => $parsed['pattern'],
+            'replace' => $parsed['replace'],
+            'twig' => $parsed['twig'],
+            'twig_has_replace' => $parsed['twig_has_replace'],
         ];
-
-        if (!strlen($pattern)) {
-            return $result;
-        }
-
-        $matches = [];
-
-        // Find all {{ ... }} expressions.
-        // Use non-greedy .*? to handle nested braces like {{ value|table({'key': 'val'}) }}.
-        preg_match_all('/\{\{.+?\}\}/s', $pattern, $matches);
-        foreach ($matches[0] as $match) {
-            // Check if it's a twig filter (contains |).
-            if (mb_strpos($match, '|') !== false) {
-                $result['twig'][] = $match;
-                // Check if twig expression has replacements inside.
-                $result['twig_has_replace'][] = preg_match('/\{\{[^|]+\}\}/', $match);
-            } else {
-                $result['replace'][] = $match;
-            }
-        }
-
-        $simpleMatches = [];
-
-        // Also find simple {path} replacements, but not inner parts of {{ }}.
-        preg_match_all('/\{[^{}]+\}/', $pattern, $simpleMatches);
-        foreach ($simpleMatches[0] as $match) {
-            // Skip if already in replace or if it's the inner part of a {{ }} expression.
-            if (in_array($match, $result['replace'])) {
-                continue;
-            }
-            // Check if this single-brace match is inside a double-brace expression.
-            $isInsideDoubleBrace = false;
-            foreach (array_merge($result['twig'], $result['replace']) as $doubleBraceExpr) {
-                if (mb_strpos($doubleBraceExpr, $match) !== false) {
-                    $isInsideDoubleBrace = true;
-                    break;
-                }
-            }
-            if (!$isInsideDoubleBrace) {
-                $result['replace'][] = $match;
-            }
-        }
-
-        return $result;
     }
 
     /**
@@ -731,10 +695,7 @@ class MapperConfig
     protected function parseXml(string $content, array $options): array
     {
         $mapping = self::EMPTY_MAPPING;
-        $mapping['info']['label'] = $this->currentName;
-
-        // The mapping is always a small file (less than some megabytes), so it
-        // can be managed directly with SimpleXml.
+        $mapping[self::SECTION_INFO]['label'] = $this->currentName;
 
         try {
             $xml = new \SimpleXMLElement($content);
@@ -744,28 +705,24 @@ class MapperConfig
             return $mapping;
         }
 
-        // Parse info section.
         if (isset($xml->info)) {
             foreach ($xml->info->children() as $element) {
                 $mapping['info'][$element->getName()] = (string) $element;
             }
         }
 
-        // Parse params section.
         if (isset($xml->params)) {
             foreach ($xml->params->children() as $element) {
                 $mapping['params'][$element->getName()] = (string) $element;
             }
         }
 
-        // Parse maps.
         foreach ($xml->map as $mapElement) {
             $hasXpath = !empty($mapElement->from['xpath']);
-            $section = $hasXpath ? 'maps' : 'default';
+            $section = $hasXpath ? self::SECTION_MAPS : self::SECTION_DEFAULT;
             $mapping[$section][] = $this->parseXmlMap($mapElement);
         }
 
-        // Parse tables.
         foreach ($xml->table as $table) {
             $code = (string) $table['code'];
             if (!$code || !isset($table->list)) {
@@ -787,46 +744,45 @@ class MapperConfig
      */
     protected function parseXmlMap(\SimpleXMLElement $element): array
     {
-        $map = ['from' => [], 'to' => [], 'mod' => []];
+        $map = [self::MAP_FROM => [], self::MAP_TO => [], self::MAP_MOD => []];
 
         // Parse from element.
         if (isset($element->from)) {
             $from = $element->from;
             if (!empty($from['xpath'])) {
-                $map['from']['querier'] = 'xpath';
-                $map['from']['path'] = (string) $from['xpath'];
+                $map[self::MAP_FROM]['querier'] = 'xpath';
+                $map[self::MAP_FROM]['path'] = (string) $from['xpath'];
             } elseif (!empty($from['jsdot'])) {
-                $map['from']['querier'] = 'jsdot';
-                $map['from']['path'] = (string) $from['jsdot'];
+                $map[self::MAP_FROM]['querier'] = 'jsdot';
+                $map[self::MAP_FROM]['path'] = (string) $from['jsdot'];
             } elseif (!empty($from['jsonpath'])) {
-                $map['from']['querier'] = 'jsonpath';
-                $map['from']['path'] = (string) $from['jsonpath'];
+                $map[self::MAP_FROM]['querier'] = 'jsonpath';
+                $map[self::MAP_FROM]['path'] = (string) $from['jsonpath'];
             } elseif (!empty($from['jmespath'])) {
-                $map['from']['querier'] = 'jmespath';
-                $map['from']['path'] = (string) $from['jmespath'];
+                $map[self::MAP_FROM]['querier'] = 'jmespath';
+                $map[self::MAP_FROM]['path'] = (string) $from['jmespath'];
             }
         }
 
         // Parse to element.
         if (isset($element->to)) {
             $to = $element->to;
-            $map['to']['field'] = (string) ($to['field'] ?? '');
+            $map[self::MAP_TO]['field'] = (string) ($to['field'] ?? '');
 
             if (!empty($to['datatype'])) {
-                $map['to']['datatype'] = explode(' ', (string) $to['datatype']);
+                $map[self::MAP_TO]['datatype'] = explode(' ', (string) $to['datatype']);
             }
             if (!empty($to['language'])) {
-                $map['to']['language'] = (string) $to['language'];
+                $map[self::MAP_TO]['language'] = (string) $to['language'];
             }
             if (isset($to['visibility'])) {
-                $map['to']['is_public'] = (string) $to['visibility'] !== 'private';
+                $map[self::MAP_TO]['is_public'] = (string) $to['visibility'] !== 'private';
             }
 
-            // Add property_id.
-            if ($map['to']['field']) {
-                $propertyId = $this->easyMeta->propertyId($map['to']['field']);
+            if ($map[self::MAP_TO]['field']) {
+                $propertyId = $this->easyMeta->propertyId($map[self::MAP_TO]['field']);
                 if ($propertyId) {
-                    $map['to']['property_id'] = $propertyId;
+                    $map[self::MAP_TO]['property_id'] = $propertyId;
                 }
             }
         }
@@ -835,20 +791,20 @@ class MapperConfig
         if (isset($element->mod)) {
             $mod = $element->mod;
             if (!empty($mod['raw'])) {
-                $map['mod']['raw'] = (string) $mod['raw'];
+                $map[self::MAP_MOD]['raw'] = (string) $mod['raw'];
             }
             if (!empty($mod['val'])) {
-                $map['mod']['val'] = (string) $mod['val'];
+                $map[self::MAP_MOD]['val'] = (string) $mod['val'];
             }
             if (!empty($mod['prepend'])) {
-                $map['mod']['prepend'] = (string) $mod['prepend'];
+                $map[self::MAP_MOD]['prepend'] = (string) $mod['prepend'];
             }
             if (!empty($mod['pattern'])) {
                 $patternMod = $this->parsePattern((string) $mod['pattern']);
-                $map['mod'] = array_merge($map['mod'], $patternMod);
+                $map[self::MAP_MOD] = array_merge($map[self::MAP_MOD], $patternMod);
             }
             if (!empty($mod['append'])) {
-                $map['mod']['append'] = (string) $mod['append'];
+                $map[self::MAP_MOD]['append'] = (string) $mod['append'];
             }
         }
 
@@ -867,7 +823,6 @@ class MapperConfig
             return $mapping;
         }
 
-        // Copy info with validation.
         foreach (['label', 'from', 'to', 'querier', 'mapper', 'example'] as $key) {
             if (!empty($input['info'][$key]) && is_string($input['info'][$key])) {
                 $mapping['info'][$key] = $input['info'][$key];
@@ -875,18 +830,15 @@ class MapperConfig
         }
         $mapping['info']['label'] = $mapping['info']['label'] ?? $this->currentName;
 
-        // Copy params.
         if (isset($input['params']) && is_array($input['params'])) {
             $mapping['params'] = $input['params'];
         }
 
-        // Copy tables.
         if (isset($input['tables']) && is_array($input['tables'])) {
             $mapping['tables'] = $input['tables'];
         }
 
-        // Normalize maps.
-        foreach (['default', 'maps'] as $section) {
+        foreach (self::MAP_SECTIONS as $section) {
             if (isset($input[$section]) && is_array($input[$section])) {
                 $options['section'] = $section;
                 $mapping[$section] = $this->normalizeMaps($input[$section], $options);
@@ -902,29 +854,23 @@ class MapperConfig
     protected function parseMapList(array $maps, array $options): array
     {
         $mapping = self::EMPTY_MAPPING;
-        $mapping['info']['label'] = $options['label'] ?? $this->currentName;
-        $mapping['info']['querier'] = 'index';
+        $mapping[self::SECTION_INFO]['label'] = $options['label'] ?? $this->currentName;
+        $mapping[self::SECTION_INFO]['querier'] = 'index';
 
-        $options['section'] = 'maps';
-        $mapping['maps'] = $this->normalizeMaps($maps, $options);
+        $options['section'] = self::SECTION_MAPS;
+        $mapping[self::SECTION_MAPS] = $this->normalizeMaps($maps, $options);
 
         return $mapping;
     }
 
     /**
-     * Convert a string into a map.
-     *
-     * The string may be:
-     * - a simple field: a spreadsheet header like `dcterms:title`
-     * - a default value: `dcterms:license = "Public domain"`
-     * - a mapping: `License = dcterms:license ^^literal ~ "Public domain"`
-     * - a complex mapping: `~ = dcterms:spatial ^^geography:coordinates ~ {lat}/{lng}`
+     * Normalize a map from a string.
      */
     protected function normalizeMapFromString(string $map, array $options): array
     {
         $map = trim($map);
         if (!$map) {
-            return ['from' => [], 'to' => [], 'mod' => []];
+            return [self::MAP_FROM => [], self::MAP_TO => [], self::MAP_MOD => []];
         }
 
         // Xml string.
@@ -933,18 +879,17 @@ class MapperConfig
                 $xml = new \SimpleXMLElement($map);
                 return $this->parseXmlMap($xml);
             } catch (\Exception $e) {
-                return ['from' => [], 'to' => [], 'mod' => [], 'has_error' => true];
+                return [self::MAP_FROM => [], self::MAP_TO => [], self::MAP_MOD => [], 'has_error' => true];
             }
         }
 
         // Ini-style string.
         $equalsPos = mb_strpos($map, '=');
         if ($equalsPos === false) {
-            // Simple field specification (no source path).
             return [
-                'from' => isset($options['index']) ? ['index' => $options['index']] : [],
-                'to' => $this->parseFieldSpec($map),
-                'mod' => [],
+                self::MAP_FROM => isset($options['index']) ? ['index' => $options['index']] : [],
+                self::MAP_TO => $this->parseFieldSpec($map),
+                self::MAP_MOD => [],
             ];
         }
 
@@ -959,45 +904,40 @@ class MapperConfig
      */
     protected function normalizeMapFromArray(array $map, array $options): array
     {
-        $result = ['from' => [], 'to' => [], 'mod' => []];
+        $result = [self::MAP_FROM => [], self::MAP_TO => [], self::MAP_MOD => []];
 
-        // Handle 'from' section.
-        if (isset($map['from'])) {
-            if (is_string($map['from'])) {
-                $result['from']['path'] = $map['from'];
-            } elseif (is_array($map['from'])) {
-                $result['from'] = $map['from'];
+        if (isset($map[self::MAP_FROM])) {
+            if (is_string($map[self::MAP_FROM])) {
+                $result[self::MAP_FROM]['path'] = $map[self::MAP_FROM];
+            } elseif (is_array($map[self::MAP_FROM])) {
+                $result[self::MAP_FROM] = $map[self::MAP_FROM];
             }
         }
 
-        // Handle 'to' section.
-        if (isset($map['to'])) {
-            if (is_string($map['to'])) {
-                $result['to'] = $this->parseFieldSpec($map['to']);
-            } elseif (is_array($map['to'])) {
-                $result['to'] = $map['to'];
-                // Ensure property_id is set.
-                if (!empty($result['to']['field']) && empty($result['to']['property_id'])) {
-                    $propertyId = $this->easyMeta->propertyId($result['to']['field']);
+        if (isset($map[self::MAP_TO])) {
+            if (is_string($map[self::MAP_TO])) {
+                $result[self::MAP_TO] = $this->parseFieldSpec($map[self::MAP_TO]);
+            } elseif (is_array($map[self::MAP_TO])) {
+                $result[self::MAP_TO] = $map[self::MAP_TO];
+                if (!empty($result[self::MAP_TO]['field']) && empty($result[self::MAP_TO]['property_id'])) {
+                    $propertyId = $this->easyMeta->propertyId($result[self::MAP_TO]['field']);
                     if ($propertyId) {
-                        $result['to']['property_id'] = $propertyId;
+                        $result[self::MAP_TO]['property_id'] = $propertyId;
                     }
                 }
             }
         }
 
-        // Handle 'mod' section.
-        if (isset($map['mod'])) {
-            if (is_string($map['mod'])) {
-                $result['mod'] = $this->parsePattern($map['mod']);
-            } elseif (is_array($map['mod'])) {
-                $result['mod'] = $map['mod'];
+        if (isset($map[self::MAP_MOD])) {
+            if (is_string($map[self::MAP_MOD])) {
+                $result[self::MAP_MOD] = $this->parsePattern($map[self::MAP_MOD]);
+            } elseif (is_array($map[self::MAP_MOD])) {
+                $result[self::MAP_MOD] = $map[self::MAP_MOD];
             }
         }
 
-        // Handle index for spreadsheet-style maps.
-        if (isset($options['index']) && empty($result['from']['path'])) {
-            $result['from']['index'] = $options['index'];
+        if (isset($options['index']) && empty($result[self::MAP_FROM]['path'])) {
+            $result[self::MAP_FROM]['index'] = $options['index'];
         }
 
         return $result;
