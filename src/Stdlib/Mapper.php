@@ -555,7 +555,7 @@ class Mapper
      *     'pattern' => '{{ endpoint }}/api{{itemLink}}',
      *     // The following keys are automatically created from the pattern.
      *     'replace' => [ '{{itemLink}}' ]
-     *     'twig' => [ '{{ endpoint }}' ],
+     *     'filters' => [ '{{ endpoint }}' ],
      * ];
      * $data = [
      *     'itemLink' => '/id/150',
@@ -655,13 +655,13 @@ class Mapper
         // Apply simple replacements.
         $result = strtr($mod['pattern'], $replace);
 
-        // Apply twig filters.
-        if (!empty($mod['twig'])) {
+        // Apply filter expressions.
+        if (!empty($mod['filters'])) {
             $result = $this->applyFilters(
                 $result,
                 $this->variables,
-                $mod['twig'],
-                $mod['twig_has_replace'] ?? [],
+                $mod['filters'],
+                $mod['filters_has_replace'] ?? [],
                 $replace
             );
         }
@@ -689,7 +689,7 @@ class Mapper
      *     'pattern' => '{{ endpoint }}/api{{itemLink}}',
      *     // The following keys are automatically created from the pattern.
      *     'replace' => [ '{{itemLink}}' ]
-     *     'twig' => [ '{{ endpoint }}' ],
+     *     'filters' => [ '{{ endpoint }}' ],
      * ];
      * $data = [
      *     'itemLink' => '/id/150',
@@ -794,13 +794,13 @@ class Mapper
         // Apply simple replacements.
         $result = strtr($mod['pattern'], $replace);
 
-        // Apply twig filters.
-        if (!empty($mod['twig'])) {
+        // Apply filter expressions.
+        if (!empty($mod['filters'])) {
             $result = $this->applyFilters(
                 $result,
                 $this->variables,
-                $mod['twig'],
-                $mod['twig_has_replace'] ?? [],
+                $mod['filters'],
+                $mod['filters_has_replace'] ?? [],
                 $replace
             );
         }
@@ -840,7 +840,7 @@ class Mapper
         $allReplacements = array_merge(
             ['{{ value }}', '{{ label }}', '{{ list }}'],
             $mod['replace'] ?? [],
-            $mod['twig'] ?? []
+            $mod['filters'] ?? []
         );
 
         // If pattern is only replacements (no static text), consider it valid.

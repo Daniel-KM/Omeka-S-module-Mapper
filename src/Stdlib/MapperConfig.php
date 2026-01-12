@@ -138,7 +138,7 @@ class MapperConfig
      * Modifier part: defines how to transform data.
      *
      * Input keys: raw, pattern, prepend, append.
-     * Computed keys (from PatternParser): replace, twig, twig_has_replace.
+     * Computed keys (from PatternParser): replace, filters, filters_has_replace.
      *
      * Note: 'val' is accepted as input but normalized to 'raw'.
      */
@@ -713,7 +713,7 @@ class MapperConfig
     }
 
     /**
-     * Parse a pattern string for replacements and twig filters.
+     * Parse a pattern string for replacements and filter expressions.
      */
     protected function parsePattern(string $pattern): array
     {
@@ -721,8 +721,8 @@ class MapperConfig
         return [
             'pattern' => $parsed['pattern'],
             'replace' => $parsed['replace'],
-            'twig' => $parsed['twig'],
-            'twig_has_replace' => $parsed['twig_has_replace'],
+            'filters' => $parsed['filters'],
+            'filters_has_replace' => $parsed['filters_has_replace'],
         ];
     }
 

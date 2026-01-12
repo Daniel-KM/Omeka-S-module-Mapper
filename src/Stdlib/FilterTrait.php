@@ -1,7 +1,11 @@
 <?php declare(strict_types=1);
 
 /**
- * Mapper filter trait for Twig-like value transformations.
+ * Mapper filter trait for value transformations.
+ *
+ * Provides filter expressions using {{ value|filter }} syntax, inspired by
+ * template languages like Twig, Jinja2, Django templates, Nunjucks, and
+ * Liquid.
  *
  * @copyright Daniel Berthereau, 2017-2026
  * @license http://www.cecill.info/licences/Licence_CeCILL_V2.1-en.txt
@@ -12,26 +16,26 @@ namespace Mapper\Stdlib;
 trait FilterTrait
 {
     /**
-     * Pattern for variables in twig expressions.
+     * Pattern for variables in filter expressions.
      *
      * @var string
      */
     protected $patternVars = '';
 
     /**
-     * Variables available for twig filters.
+     * Variables available for filter expressions.
      *
      * @var array
      */
     protected $filterVars = [];
 
     /**
-     * Apply Twig-like filters to transform a value.
+     * Apply filter expressions to transform a value.
      *
-     * @param string $pattern The full pattern containing twig expressions.
-     * @param array $filterVars Variables for replacements (e.g., ['value' => 'x']).
-     * @param array $filters List of twig expressions to process.
-     * @param array $filterHasReplace Boolean flags indicating if each filter has replacements.
+     * @param string $pattern The full pattern containing filter expressions.
+     * @param array $filterVars Variables for replacements.
+     * @param array $filters List of filter expressions to process.
+     * @param array $filterHasReplace Flags if filter has replacements.
      * @param array $replace Associative replacements for dynamic values.
      * @return string The processed result.
      */
@@ -110,7 +114,7 @@ trait FilterTrait
             $args = '';
         }
 
-        // Convert DOMNode to string, but preserve arrays for filters like last/first/join.
+        // Convert DOMNode to string, preserve arrays for last/first/join.
         if ($value instanceof \DOMNode) {
             $value = (string) $value->nodeValue;
         }
@@ -347,7 +351,7 @@ trait FilterTrait
      * "d1605110512" => "1605-11-05T12"
      * "[1984]-" => kept.
      *
-     * Missing numbers may be set as "u", but it is not manageable as iso 8601.
+     * Missing numbers may be set as "u", but not manageable as iso 8601.
      * The first character may be a space to manage Unimarc.
      */
     protected function filterDateIso(string $value): string
@@ -625,7 +629,7 @@ trait FilterTrait
      * The records linked with BnF use only the code, without the check
      * character, so it should be computed in order to get the uri.
      *
-     * Unlike noid recommendation, the check for bnf doesn't use the naan ("12148").
+     * Unlike noid recommendation, the check for bnf doesn't use naan ("12148").
      *
      * @see https://metacpan.org/dist/Noid/view/noid#NOID-CHECK-DIGIT-ALGORITHM
      *

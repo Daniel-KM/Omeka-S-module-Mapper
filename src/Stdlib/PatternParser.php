@@ -1,11 +1,11 @@
 <?php declare(strict_types=1);
 
 /**
- * PatternParser - Parses pattern strings for replacements and Twig filters.
+ * PatternParser - Parses pattern strings for replacements and filters.
  *
  * Handles the parsing of pattern templates like:
  * - Simple replacements: {path} or {{ path }}
- * - Twig filters: {{ value|filter }}
+ * - Filter expressions: {{ value|filter }} (syntax inspired by Twig/Jinja2)
  * - Mixed patterns: "Prefix {path} and {{ value|upper }}"
  *
  * @copyright Daniel Berthereau, 2017-2026
@@ -22,17 +22,17 @@ class PatternParser
     public const EMPTY_RESULT = [
         'pattern' => '',
         'replace' => [],
-        'twig' => [],
-        'twig_has_replace' => [],
+        'filters' => [],
+        'filters_has_replace' => [],
         'is_simple' => true,
-        'has_twig' => false,
+        'has_filters' => false,
     ];
 
     /**
-     * Parse a pattern string for replacements and twig filters.
+     * Parse a pattern string for replacements and filter expressions.
      *
      * @param string $pattern The pattern string to parse.
-     * @return array Parsed pattern with replace, twig arrays.
+     * @return array Parsed pattern with replace, filters arrays.
      */
     public function parse(string $pattern): array
     {
@@ -47,13 +47,13 @@ class PatternParser
         $doubleBraceMatches = $this->findDoubleBraceExpressions($pattern);
 
         foreach ($doubleBraceMatches as $match) {
-            // Check if it's a twig filter (contains |).
+            // Check if it's a filter expression (contains |).
             if (mb_strpos($match, '|') !== false) {
-                $result['twig'][] = $match;
-                $result['has_twig'] = true;
-                // Check if twig expression has replacements inside.
+                $result['filters'][] = $match;
+                $result['has_filters'] = true;
+                // Check if filter expression has replacements inside.
                 // e.g., {{ {path}|filter }} has inner replacement.
-                $result['twig_has_replace'][] = $this->hasSingleBraceInside($match);
+                $result['filters_has_replace'][] = $this->hasSingleBraceInside($match);
             } else {
                 $result['replace'][] = $match;
             }
@@ -74,7 +74,7 @@ class PatternParser
         }
 
         // Determine if simple pattern (no twig, just replacements).
-        $result['is_simple'] = empty($result['twig']);
+        $result['is_simple'] = empty($result['filters']);
 
         return $result;
     }
@@ -97,7 +97,7 @@ class PatternParser
             $path = mb_substr($path, 1, -1);
         }
 
-        // Remove twig filter part if present.
+        // Remove filter part if present.
         $pipePos = mb_strpos($path, '|');
         if ($pipePos !== false) {
             $path = mb_substr($path, 0, $pipePos);
@@ -107,7 +107,7 @@ class PatternParser
     }
 
     /**
-     * Extract the filter chain from a twig expression.
+     * Extract the filter chain from a filter expression.
      *
      * @param string $expression Expression like "{{ value|upper|lower }}".
      * @return array Array of filter names.
@@ -117,7 +117,7 @@ class PatternParser
         // Remove braces.
         $inner = $this->extractPath($expression);
 
-        // Check if this was a twig expression.
+        // Check if this was a filter expression.
         $pipePos = mb_strpos($expression, '|');
         if ($pipePos === false) {
             return [];
@@ -150,7 +150,7 @@ class PatternParser
     }
 
     /**
-     * Check if a pattern contains any replacements or twig filters.
+     * Check if a pattern contains any replacements or filter expressions.
      */
     public function hasExpressions(string $pattern): bool
     {
