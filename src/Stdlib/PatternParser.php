@@ -1,12 +1,19 @@
 <?php declare(strict_types=1);
 
 /**
- * PatternParser - Parses pattern strings for replacements and filters.
+ * PatternParser - Parses pattern strings for substitutions and filters.
  *
- * Handles the parsing of pattern templates like:
- * - Simple replacements: {path} or {{ path }}
- * - Filter expressions: {{ value|filter }} (syntax inspired by Twig/Jinja2)
- * - Mixed patterns: "Prefix {path} and {{ value|upper }}"
+ * Handles two types of expressions:
+ *
+ * 1. PSR-3 style substitution: {key}
+ *    Simple placeholder replacement from data array.
+ *    Example: "Item {id}" + ['id' => '123'] → "Item 123"
+ *
+ * 2. Twig-style variables and filters: {{ variable }} or {{ variable|filter }}
+ *    Access to context variables with optional filter transformations.
+ *    Example: "{{ value|upper }}" → "HELLO"
+ *
+ * Combined: {{ {key}|filter }} - Substitution then filter.
  *
  * @copyright Daniel Berthereau, 2017-2026
  * @license http://www.cecill.info/licences/Licence_CeCILL_V2.1-en.txt

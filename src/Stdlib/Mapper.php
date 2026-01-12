@@ -163,10 +163,20 @@ class Mapper
 
     /**
      * Set variables available during mapping.
+     *
+     * When static variables (url, filename) are set, this method also triggers
+     * evaluation of static params in the current mapping.
      */
     public function setVariables(array $variables): self
     {
         $this->variables = $variables;
+
+        // Evaluate static params if static variables are provided.
+        $hasStaticVars = !empty($variables['url']) || !empty($variables['filename']);
+        if ($hasStaticVars && $this->mappingName) {
+            $this->mapperConfig->evaluateStaticParams($variables, $this->mappingName);
+        }
+
         return $this;
     }
 
@@ -631,8 +641,8 @@ class Mapper
         $replace = [];
         if (!empty($mod['replace']) && $data) {
             foreach ($mod['replace'] as $wrappedQuery) {
-                // Skip special variables.
-                if (in_array($wrappedQuery, ['{{ value }}', '{{ label }}', '{{ list }}'])) {
+                // Skip special variable {{ value }} (handled separately via filters).
+                if ($wrappedQuery === '{{ value }}') {
                     $replace[$wrappedQuery] = '';
                     continue;
                 }
@@ -763,7 +773,8 @@ class Mapper
         if (!empty($mod['replace']) && $doc) {
             $contextNode = $fromValue instanceof DOMNode ? $fromValue : null;
             foreach ($mod['replace'] as $wrappedQuery) {
-                if (in_array($wrappedQuery, ['{{ value }}', '{{ label }}', '{{ list }}'])) {
+                // Skip special variable {{ value }} (handled separately via filters).
+                if ($wrappedQuery === '{{ value }}') {
                     $replace[$wrappedQuery] = '';
                     continue;
                 }
@@ -838,7 +849,7 @@ class Mapper
         }
 
         $allReplacements = array_merge(
-            ['{{ value }}', '{{ label }}', '{{ list }}'],
+            ['{{ value }}'],
             $mod['replace'] ?? [],
             $mod['filters'] ?? []
         );

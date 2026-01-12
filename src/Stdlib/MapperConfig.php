@@ -119,6 +119,39 @@ class MapperConfig
     ];
 
     // =========================================================================
+    // Variable Constants (for params evaluation)
+    // =========================================================================
+
+    /**
+     * Static variables available at initialization (before processing resources).
+     *
+     * These variables are known when the mapping is first loaded and the source
+     * URL/filename are provided. Params using only these variables can be
+     * evaluated once at initialization.
+     */
+    public const STATIC_VARIABLES = [
+        'url',
+        'filename',
+    ];
+
+    /**
+     * Dynamic variables available during resource processing.
+     *
+     * These variables change during mapping execution:
+     * - page: current pagination page
+     * - value: current extracted value
+     * - url_resource: URL of the resource being processed
+     * - {key}: PSR-3 style substitution from source data
+     *
+     * Params using these variables must be evaluated on each access.
+     */
+    public const DYNAMIC_VARIABLES = [
+        'page',
+        'value',
+        'url_resource',
+    ];
+
+    // =========================================================================
     // Map Part Constants (Level 2: parts of each individual map)
     // =========================================================================
 
@@ -334,6 +367,322 @@ class MapperConfig
     public function getCurrentName(): ?string
     {
         return $this->currentName;
+    }
+
+    /**
+     * Evaluate static params using provided variables.
+     *
+     * Static params are those whose patterns only reference static variables
+     * (url, filename) or previously evaluated params. This method evaluates
+     * these params once, replacing the pattern structure with the resulting
+     * string value.
+     *
+     * @param array $variables Variables to use for evaluation (should contain 'url', 'filename').
+     * @param string|null $name Mapping name (defaults to current).
+     * @return self
+     */
+    public function evaluateStaticParams(array $variables, ?string $name = null): self
+    {
+        $name = $name ?? $this->currentName;
+        if (!$name || !isset($this->mappings[$name])) {
+            return $this;
+        }
+
+        $params = $this->mappings[$name][self::SECTION_PARAMS] ?? [];
+        if (empty($params)) {
+            return $this;
+        }
+
+        // Build context with static variables.
+        $context = [];
+        foreach (self::STATIC_VARIABLES as $varName) {
+            if (isset($variables[$varName])) {
+                $context[$varName] = $variables[$varName];
+            }
+        }
+
+        // Evaluate params in order (order matters for dependencies).
+        foreach ($params as $key => $value) {
+            // Skip raw params (not patterns).
+            if (!is_array($value) || !isset($value['pattern'])) {
+                // Raw value - add to context for subsequent params.
+                $context[$key] = $value;
+                continue;
+            }
+
+            // Check if this param uses only static variables.
+            if (!$this->isStaticParam($value)) {
+                // Dynamic param - keep as-is but add empty to context.
+                $context[$key] = '';
+                continue;
+            }
+
+            // Evaluate the pattern with current context.
+            $evaluated = $this->evaluatePattern($value, $context);
+            if ($evaluated !== null) {
+                // Replace the pattern structure with evaluated string.
+                $this->mappings[$name][self::SECTION_PARAMS][$key] = $evaluated;
+                // Add evaluated value to context for subsequent params.
+                $context[$key] = $evaluated;
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Check if a param is static (uses only static variables).
+     *
+     * A param is static if its pattern only references:
+     * - Static variables (url, filename)
+     * - Previously defined params (which can be checked separately)
+     * - Literal strings with filters
+     *
+     * @param array $paramValue The parsed param value with pattern/replace/filters.
+     * @return bool True if the param can be evaluated statically.
+     */
+    protected function isStaticParam(array $paramValue): bool
+    {
+        // Check for dynamic variables in pattern.
+        $pattern = $paramValue['pattern'] ?? '';
+        foreach (self::DYNAMIC_VARIABLES as $dynamicVar) {
+            if (mb_strpos($pattern, '{{ ' . $dynamicVar) !== false) {
+                return false;
+            }
+        }
+
+        // Check for PSR-3 style substitutions {key} which are always dynamic.
+        if (preg_match('/\{[^{}]+\}/', $pattern)) {
+            // If there's a single-brace substitution that's not inside {{ }},
+            // it's a dynamic data reference.
+            $cleanPattern = preg_replace('/\{\{[^}]+\}\}/', '', $pattern);
+            if (preg_match('/\{[^{}]+\}/', $cleanPattern)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Evaluate a pattern param with given context.
+     *
+     * @param array $paramValue The parsed param value with pattern/replace/filters.
+     * @param array $context Variables available for replacement.
+     * @return string|null Evaluated string or null if evaluation fails.
+     */
+    protected function evaluatePattern(array $paramValue, array $context): ?string
+    {
+        $pattern = $paramValue['pattern'] ?? '';
+        if (!strlen($pattern)) {
+            return null;
+        }
+
+        // Build replacements for {{ variable }} syntax.
+        $replace = [];
+        foreach ($context as $name => $value) {
+            if (is_scalar($value)) {
+                $replace['{{ ' . $name . ' }}'] = $value;
+            }
+        }
+
+        // Apply simple replacements first.
+        $result = strtr($pattern, $replace);
+
+        // Apply filter expressions if present.
+        if (!empty($paramValue['filters'])) {
+            $result = $this->applySimpleFilters(
+                $result,
+                $context,
+                $paramValue['filters']
+            );
+        }
+
+        return $result;
+    }
+
+    /**
+     * Apply simple filters for param evaluation.
+     *
+     * This is a simplified version of FilterTrait::applyFilters() that handles
+     * common filters needed for param evaluation.
+     *
+     * @param string $result Current result string.
+     * @param array $context Variables available.
+     * @param array $filters Filter expressions to apply.
+     * @return string Processed result.
+     */
+    protected function applySimpleFilters(string $result, array $context, array $filters): string
+    {
+        foreach ($filters as $expression) {
+            // Extract the expression content: {{ variable|filter }}
+            $inner = trim(mb_substr((string) $expression, 3, -3));
+            $parts = array_filter(array_map('trim', explode('|', $inner)));
+
+            if (empty($parts)) {
+                continue;
+            }
+
+            // First part is the variable name.
+            $varName = array_shift($parts);
+            $value = $context[$varName] ?? '';
+
+            // Apply each filter.
+            foreach ($parts as $filter) {
+                $value = $this->applySimpleFilter($value, $filter);
+            }
+
+            // Ensure final value is a string.
+            if (is_array($value)) {
+                $value = (string) reset($value);
+            }
+
+            // Replace the expression with the result.
+            $result = str_replace($expression, (string) $value, $result);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Apply a single filter for param evaluation.
+     *
+     * Only supports filters commonly used in params.
+     *
+     * @param mixed $value The value to filter.
+     * @param string $filter The filter with optional arguments.
+     * @return string|array The filtered value (array for split, string otherwise).
+     */
+    protected function applySimpleFilter($value, string $filter)
+    {
+        $stringValue = is_array($value) ? (string) reset($value) : (string) $value;
+
+        // Parse filter name and arguments.
+        if (preg_match('~\s*(?<function>[a-zA-Z0-9_]+)\s*\(\s*(?<args>.*?)\s*\)\s*~U', $filter, $matches)) {
+            $function = $matches['function'];
+            $args = $matches['args'];
+        } else {
+            $function = $filter;
+            $args = '';
+        }
+
+        switch ($function) {
+            case 'basename':
+                return basename($stringValue);
+
+            case 'first':
+                if (is_array($value)) {
+                    return (string) reset($value);
+                }
+                return mb_substr($stringValue, 0, 1);
+
+            case 'last':
+                if (is_array($value)) {
+                    return (string) end($value);
+                }
+                return mb_substr($stringValue, -1);
+
+            case 'lower':
+                return mb_strtolower($stringValue);
+
+            case 'upper':
+                return mb_strtoupper($stringValue);
+
+            case 'trim':
+                return trim($stringValue);
+
+            case 'split':
+                // Extract arguments.
+                $argList = $this->extractSimpleList($args);
+                $delimiter = $argList[0] ?? '';
+                if (!strlen($delimiter)) {
+                    return $stringValue;
+                }
+                $limit = isset($argList[1]) ? (int) $argList[1] : PHP_INT_MAX;
+                // Return as array for further processing (e.g., by first/last/slice).
+                return explode($delimiter, $stringValue, $limit);
+
+            case 'slice':
+                $argList = $this->extractSimpleList($args);
+                $start = (int) ($argList[0] ?? 0);
+                $length = isset($argList[1]) ? (int) $argList[1] : 1;
+                if (is_array($value)) {
+                    $sliced = array_slice($value, $start, $length);
+                    return (string) reset($sliced);
+                }
+                return mb_substr($stringValue, $start, $length);
+
+            default:
+                return $stringValue;
+        }
+    }
+
+    /**
+     * Extract a simple list of arguments from a string.
+     *
+     * @param string $args Argument string like "'/', -1" or "1, 4".
+     * @return array List of argument values.
+     */
+    protected function extractSimpleList(string $args): array
+    {
+        $result = [];
+        $matches = [];
+        preg_match_all('~"([^"]*)"|\'([^\']*)\'|([+-]?\d+)~', $args, $matches, PREG_SET_ORDER);
+        foreach ($matches as $match) {
+            if (isset($match[3]) && $match[3] !== '') {
+                $result[] = $match[3];
+            } elseif (isset($match[2]) && $match[2] !== '') {
+                $result[] = $match[2];
+            } elseif (isset($match[1])) {
+                $result[] = $match[1];
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * Verify param order in a mapping.
+     *
+     * Checks that params referencing other params are defined after them.
+     * Logs warnings for out-of-order params.
+     *
+     * @param array $params The params section to verify.
+     * @return array List of warnings (empty if valid).
+     */
+    public function verifyParamOrder(array $params): array
+    {
+        $warnings = [];
+        $defined = [];
+
+        foreach ($params as $key => $value) {
+            // Check if this param references other params.
+            if (is_array($value) && isset($value['pattern'])) {
+                $pattern = $value['pattern'];
+
+                // Find all {{ variable }} references.
+                preg_match_all('/\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:\|[^}]*)?\}\}/', $pattern, $matches);
+                foreach ($matches[1] as $refVar) {
+                    // Skip static and dynamic variables.
+                    if (in_array($refVar, self::STATIC_VARIABLES) || in_array($refVar, self::DYNAMIC_VARIABLES)) {
+                        continue;
+                    }
+                    // Check if referenced param is defined before this one.
+                    if (!in_array($refVar, $defined) && isset($params[$refVar])) {
+                        $warnings[] = sprintf(
+                            'Param "%s" references "%s" which is defined later. Move "%s" before "%s".',
+                            $key,
+                            $refVar,
+                            $refVar,
+                            $key
+                        );
+                    }
+                }
+            }
+
+            $defined[] = $key;
+        }
+
+        return $warnings;
     }
 
     /**
@@ -660,6 +1009,7 @@ class MapperConfig
      * This method:
      * - Loads and merges base mapping if info.mapper is set (INI inheritance)
      * - Merges 'default' section into 'maps' (default is deprecated)
+     * - Verifies param order for dependent params
      * - Logs deprecation warnings as appropriate
      *
      * @param array $mapping The parsed mapping.
@@ -685,6 +1035,17 @@ class MapperConfig
             );
             // Clear the default section (keep empty array for structure).
             $mapping[self::SECTION_DEFAULT] = [];
+        }
+
+        // Verify param order and log warnings.
+        if (!empty($mapping[self::SECTION_PARAMS])) {
+            $warnings = $this->verifyParamOrder($mapping[self::SECTION_PARAMS]);
+            foreach ($warnings as $warning) {
+                $this->logger->warn(
+                    'Mapping "{name}": {warning}', // @translate
+                    ['name' => $this->currentName ?? 'unknown', 'warning' => $warning]
+                );
+            }
         }
 
         return $mapping;
@@ -867,7 +1228,22 @@ class MapperConfig
                 }
             } elseif ($section === self::SECTION_TABLES) {
                 if (isset($map[self::MAP_FROM]) && isset($map[self::MAP_TO])) {
-                    $mapping[self::SECTION_TABLES][$map[self::MAP_FROM]][$map['key'] ?? ''] = $map[self::MAP_TO];
+                    // Tables format: table.key = value
+                    // MAP_FROM may be string (from parseIniLine) or array (from normalizeMapFromIniParts).
+                    $tablePath = is_array($map[self::MAP_FROM])
+                        ? ($map[self::MAP_FROM]['path'] ?? '')
+                        : $map[self::MAP_FROM];
+                    if (is_string($tablePath)) {
+                        $dotPos = mb_strpos($tablePath, '.');
+                        if ($dotPos !== false) {
+                            $tableName = mb_substr($tablePath, 0, $dotPos);
+                            $tableKey = mb_substr($tablePath, $dotPos + 1);
+                            $tableValue = is_array($map[self::MAP_TO])
+                                ? ($map[self::MAP_TO]['field'] ?? '')
+                                : $map[self::MAP_TO];
+                            $mapping[self::SECTION_TABLES][$tableName][$tableKey] = $tableValue;
+                        }
+                    }
                 }
             } else {
                 $mapping[$section][] = $map;
@@ -882,10 +1258,21 @@ class MapperConfig
      */
     protected function parseIniLine(string $line, string $section, array $options): ?array
     {
+        // Find the equals sign that separates source from destination.
+        // For maps, if line starts with "~", look for first "=" after it.
+        // Otherwise, find "=" before the first "~" (which starts a pattern).
         $tildePos = mb_strpos($line, '~');
-        $equalsPos = $tildePos !== false
-            ? mb_strpos(mb_substr($line, 0, $tildePos), '=')
-            : mb_strrpos($line, '=');
+
+        if ($tildePos === 0) {
+            // Line starts with "~" (default map) - find first "=" after it.
+            $equalsPos = mb_strpos($line, '=');
+        } elseif ($tildePos !== false) {
+            // Line has "~" later (pattern) - find "=" before the tilde.
+            $equalsPos = mb_strpos(mb_substr($line, 0, $tildePos), '=');
+        } else {
+            // No tilde - find last "=" in line.
+            $equalsPos = mb_strrpos($line, '=');
+        }
 
         if ($equalsPos === false) {
             return null;
@@ -899,11 +1286,19 @@ class MapperConfig
         }
 
         if (in_array($section, self::KEYVALUE_SECTIONS)) {
+            // Strip quotes if present.
             if ((mb_substr($to, 0, 1) === '"' && mb_substr($to, -1) === '"')
                 || (mb_substr($to, 0, 1) === "'" && mb_substr($to, -1) === "'")
             ) {
                 $to = mb_substr($to, 1, -1);
             }
+
+            // For params section, check if value is a pattern (starts with ~).
+            if ($section === self::SECTION_PARAMS && mb_substr(ltrim($to), 0, 1) === '~') {
+                $patternPart = trim(mb_substr(ltrim($to), 1));
+                $to = $this->parsePattern($patternPart);
+            }
+
             return [self::MAP_FROM => $from, self::MAP_TO => $to];
         }
 
