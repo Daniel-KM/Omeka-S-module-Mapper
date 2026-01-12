@@ -355,7 +355,8 @@ class Mapper
             }
 
             $from = $map['from'] ?? [];
-            $fromPath = $from['path'] ?? null;
+            // Support both 'path' and 'index' - index is used for spreadsheet column names.
+            $fromPath = $from['path'] ?? $from['index'] ?? null;
             $querier = $from['querier']
                 ?? $this->mapperConfig->getSectionSetting('info', 'querier')
                 ?? 'jsdot';
@@ -1042,7 +1043,11 @@ class Mapper
 
         // Convert simple values to array format with metadata from $to.
         // This ensures datatype, language, and visibility are preserved.
-        if ($fieldType !== 'array' && $fieldType !== 'arrays') {
+        // Skip conversion for string/strings field types - they need raw values
+        // (e.g., file, o:source, ingest_url expect raw strings, not JSON-LD).
+        if ($fieldType !== 'array' && $fieldType !== 'arrays'
+            && $fieldType !== 'string' && $fieldType !== 'strings'
+        ) {
             $datatype = $to['datatype'][0] ?? null;
             $language = $to['language'] ?? null;
             $isPublic = $to['is_public'] ?? null;
