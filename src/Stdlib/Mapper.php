@@ -364,10 +364,14 @@ class Mapper
             $append = $mod['append'] ?? '';
             $val = $mod['val'] ?? '';
 
-            // Default map - no source path, apply without extracting data.
+            // Default map - no source path, but pattern can access all data.
             if (empty($fromPath)) {
+                // Lazy-load flat data for pattern replacements.
+                if ($flatData === null && $data) {
+                    $flatData = $this->flatArray($data);
+                }
                 $this->setVariable('value', null);
-                $converted = $this->convertTargetToStringArray($from, $mod, null, $querier);
+                $converted = $this->convertTargetToStringArray($from, $mod, $flatData, $querier);
                 if ($converted === null || $converted === '') {
                     continue;
                 }
@@ -462,10 +466,10 @@ class Mapper
             $append = $mod['append'] ?? '';
             $val = $mod['val'] ?? '';
 
-            // Default map - no source path, apply without extracting data.
+            // Default map - no source path, but pattern can query the document.
             if (empty($fromPath)) {
                 $this->setVariable('value', null);
-                $converted = $this->convertTargetToStringXml($from, $mod, null, null, $outputAsXml);
+                $converted = $this->convertTargetToStringXml($from, $mod, $doc, null, $outputAsXml);
                 if ($converted === null || $converted === '') {
                     continue;
                 }
@@ -637,28 +641,31 @@ class Mapper
             return (string) $mod['val'];
         }
 
-        // Build replacements from data.
+        // Build replacements with strict syntax distinction:
+        // - {path} → source data only (PSR-3 style)
+        // - {{ variable }} → context variables only (Twig-style)
         $replace = [];
-        if (!empty($mod['replace']) && $data) {
-            foreach ($mod['replace'] as $wrappedQuery) {
-                // Skip special variable {{ value }} (handled separately via filters).
-                if ($wrappedQuery === '{{ value }}') {
-                    $replace[$wrappedQuery] = '';
-                    continue;
-                }
-                $query = mb_substr($wrappedQuery, 2, -2);
-                $replace[$wrappedQuery] = $data[$query] ?? '';
-            }
-        } elseif (!empty($mod['replace'])) {
-            $replace = array_fill_keys($mod['replace'], '');
-        }
 
-        // Add variables to replacements.
+        // First, add all context variables ({{ variable }} format).
         foreach ($this->variables as $name => $value) {
             if ($value instanceof DOMNode) {
                 $replace["{{ $name }}"] = (string) $value->nodeValue;
             } elseif (is_scalar($value)) {
                 $replace["{{ $name }}"] = $value;
+            }
+        }
+
+        // Then, add source data replacements ({path} format only).
+        if (!empty($mod['replace']) && $data) {
+            foreach ($mod['replace'] as $wrappedQuery) {
+                // Only process single-brace {path} for data lookup.
+                // Double-brace {{ variable }} uses variables above.
+                if (mb_substr($wrappedQuery, 0, 2) === '{{') {
+                    continue;
+                }
+                // Extract path from {path}.
+                $query = $this->extractPathFromBraces($wrappedQuery);
+                $replace[$wrappedQuery] = $data[$query] ?? '';
             }
         }
 
@@ -768,17 +775,31 @@ class Mapper
             return (string) $mod['val'];
         }
 
-        // Build replacements from xpath queries.
+        // Build replacements with strict syntax distinction:
+        // - {xpath} → XPath query on document (PSR-3 style)
+        // - {{ variable }} → context variables only (Twig-style)
         $replace = [];
+
+        // First, add all context variables ({{ variable }} format).
+        foreach ($this->variables as $name => $value) {
+            if ($value instanceof DOMNode) {
+                $replace["{{ $name }}"] = (string) $value->nodeValue;
+            } elseif (is_scalar($value)) {
+                $replace["{{ $name }}"] = $value;
+            }
+        }
+
+        // Then, add XPath query replacements ({xpath} format only).
         if (!empty($mod['replace']) && $doc) {
             $contextNode = $fromValue instanceof DOMNode ? $fromValue : null;
             foreach ($mod['replace'] as $wrappedQuery) {
-                // Skip special variable {{ value }} (handled separately via filters).
-                if ($wrappedQuery === '{{ value }}') {
-                    $replace[$wrappedQuery] = '';
+                // Only process single-brace {xpath} for XPath queries.
+                // Double-brace {{ variable }} uses variables above.
+                if (mb_substr($wrappedQuery, 0, 2) === '{{') {
                     continue;
                 }
-                $query = mb_substr($wrappedQuery, 2, -2);
+                // Extract xpath query from {xpath}.
+                $query = $this->extractPathFromBraces($wrappedQuery);
                 $nodes = $this->xpathQuery($doc, $query, $contextNode);
                 if (!empty($nodes)) {
                     $firstNode = reset($nodes);
@@ -788,17 +809,6 @@ class Mapper
                 } else {
                     $replace[$wrappedQuery] = '';
                 }
-            }
-        } elseif (!empty($mod['replace'])) {
-            $replace = array_fill_keys($mod['replace'], '');
-        }
-
-        // Add variables to replacements.
-        foreach ($this->variables as $name => $value) {
-            if ($value instanceof DOMNode) {
-                $replace["{{ $name }}"] = (string) $value->nodeValue;
-            } elseif (is_scalar($value)) {
-                $replace["{{ $name }}"] = $value;
             }
         }
 
@@ -840,7 +850,8 @@ class Mapper
      */
     protected function hasReplacement($value, ?string $result, array $mod): bool
     {
-        if ($value === null || $result === null || !strlen($result)) {
+        // Result must have content.
+        if ($result === null || !strlen($result)) {
             return false;
         }
 
@@ -860,8 +871,34 @@ class Mapper
             return true;
         }
 
+        // Default maps have no value but combine source data via {path} replacements.
+        // If we have replacements and result differs from pattern, it's valid.
+        if ($value === null) {
+            return $mod['pattern'] !== $result;
+        }
+
         // Check if result differs from pattern with all replacements removed.
         return str_replace($allReplacements, '', (string) $value) !== $result;
+    }
+
+    /**
+     * Extract path from braced expression.
+     *
+     * Handles both PSR-3 style {path} and double-brace {{path}} or {{ path }}.
+     */
+    protected function extractPathFromBraces(string $expression): string
+    {
+        $path = trim($expression);
+
+        // Handle double braces first.
+        if (mb_substr($path, 0, 2) === '{{' && mb_substr($path, -2) === '}}') {
+            $path = mb_substr($path, 2, -2);
+        } elseif (mb_substr($path, 0, 1) === '{' && mb_substr($path, -1) === '}') {
+            // Single braces.
+            $path = mb_substr($path, 1, -1);
+        }
+
+        return trim($path);
     }
 
     /**
