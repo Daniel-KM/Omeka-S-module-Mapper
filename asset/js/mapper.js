@@ -16,17 +16,35 @@
             mapping: {
                 attrs: {
                 },
-                children: ['include', 'info', 'map', 'table'],
+                // Elements can be placed directly or in containers (params, maps, tables).
+                children: ['include', 'info', 'params', 'param', 'maps', 'map', 'tables', 'table'],
             },
             include: {
                 attrs: {
                     mapping: null,
-                }
+                },
             },
             info: {
                 attrs: {
                 },
-                children: ['from', 'to', 'label'],
+                children: ['label', 'from', 'to', 'querier', 'mapper', 'example'],
+            },
+            // Container for params (optional).
+            params: {
+                attrs: {
+                },
+                children: ['param'],
+            },
+            param: {
+                attrs: {
+                    name: null,
+                },
+            },
+            // Container for maps (optional).
+            maps: {
+                attrs: {
+                },
+                children: ['map'],
             },
             map: {
                 attrs: {
@@ -39,6 +57,7 @@
                     jmespath: null,
                     jsonpath: null,
                     xpath: null,
+                    index: null,
                 },
             },
             to: {
@@ -52,24 +71,33 @@
             mod: {
                 attrs: {
                     raw: null,
-                    val: null,
-                    prepend: null,
                     pattern: null,
+                    prepend: null,
                     append: null,
                 },
             },
+            // Container for tables (optional).
+            tables: {
+                attrs: {
+                },
+                children: ['table'],
+            },
             table: {
                 attrs: {
+                    name: null,
                     code: null,
                     lang: null,
-                    info: null,
                 },
-                children: ['label', 'list'],
+                children: ['label', 'entry', 'list'],
+            },
+            entry: {
+                attrs: {
+                    key: null,
+                },
             },
             label: {
                 attrs: {
                     lang: null,
-                    code: null,
                 },
             },
             list: {
@@ -80,6 +108,19 @@
             term: {
                 attrs: {
                     code: null,
+                },
+            },
+            // Info children (simple text elements).
+            querier: {
+                attrs: {
+                },
+            },
+            mapper: {
+                attrs: {
+                },
+            },
+            example: {
+                attrs: {
                 },
             },
         };

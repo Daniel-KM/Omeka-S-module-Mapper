@@ -1463,27 +1463,63 @@ class MapperConfig
             }
         }
 
+        // Handle <params> container (recommended) or direct <param> elements.
         if (isset($xml->params)) {
             foreach ($xml->params->children() as $element) {
-                $mapping['params'][$element->getName()] = (string) $element;
+                $name = (string) ($element['name'] ?? $element->getName());
+                $mapping['params'][$name] = (string) $element;
+            }
+        }
+        foreach ($xml->param as $element) {
+            $name = (string) ($element['name'] ?? '');
+            if (strlen($name)) {
+                $mapping['params'][$name] = (string) $element;
             }
         }
 
+        // Handle <maps> container (recommended) and/or direct <map> elements.
+        // Both are cumulative (like <param>).
+        if (isset($xml->maps)) {
+            foreach ($xml->maps->map as $mapElement) {
+                $mapping[self::SECTION_MAPS][] = $this->parseXmlMap($mapElement);
+            }
+        }
         foreach ($xml->map as $mapElement) {
-            $hasXpath = !empty($mapElement->from['xpath']);
-            $section = $hasXpath ? self::SECTION_MAPS : self::SECTION_DEFAULT;
-            $mapping[$section][] = $this->parseXmlMap($mapElement);
+            $mapping[self::SECTION_MAPS][] = $this->parseXmlMap($mapElement);
         }
 
+        // Handle <tables> container (recommended) and/or direct <table> elements.
+        // Both are cumulative (like <param>).
+        $allTables = [];
+        if (isset($xml->tables)) {
+            foreach ($xml->tables->table as $table) {
+                $allTables[] = $table;
+            }
+        }
         foreach ($xml->table as $table) {
-            $code = (string) $table['code'];
-            if (!$code || !isset($table->list)) {
+            $allTables[] = $table;
+        }
+        foreach ($allTables as $table) {
+            $tableName = (string) ($table['name'] ?? $table['code'] ?? '');
+            if (!$tableName) {
                 continue;
             }
-            foreach ($table->list->term as $term) {
-                $termCode = (string) $term['code'];
-                if (strlen($termCode)) {
-                    $mapping['tables'][$code][$termCode] = (string) $term;
+            // New format: <entry key="a">Value</entry>
+            if (isset($table->entry)) {
+                foreach ($table->entry as $entry) {
+                    $key = (string) ($entry['key'] ?? '');
+                    if (strlen($key)) {
+                        $mapping['tables'][$tableName][$key] = (string) $entry;
+                    }
+                }
+            }
+            // Legacy format: <list><term code="a">Value</term></list>
+            elseif (isset($table->list)) {
+                foreach ($table->list->term as $term) {
+                    $termCode = (string) $term['code'];
+                    if (strlen($termCode)) {
+                        $mapping['tables'][$tableName][$termCode] = (string) $term;
+                    }
                 }
             }
         }
@@ -1565,19 +1601,20 @@ class MapperConfig
 
     /**
      * Parse a pre-normalized array mapping.
+     *
+     * All sections are optional. If info is missing, label defaults to the
+     * current mapping name (consistent with INI and XML parsing).
      */
     protected function parseNormalizedArray(array $input, array $options): array
     {
         $mapping = self::EMPTY_MAPPING;
 
-        if (!isset($input['info']) || !is_array($input['info'])) {
-            $mapping['has_error'] = true;
-            return $mapping;
-        }
-
-        foreach (['label', 'from', 'to', 'querier', 'mapper', 'example'] as $key) {
-            if (!empty($input['info'][$key]) && is_string($input['info'][$key])) {
-                $mapping['info'][$key] = $input['info'][$key];
+        // Info section is optional (consistent with INI and XML formats).
+        if (isset($input['info']) && is_array($input['info'])) {
+            foreach (['label', 'from', 'to', 'querier', 'mapper', 'example'] as $key) {
+                if (!empty($input['info'][$key]) && is_string($input['info'][$key])) {
+                    $mapping['info'][$key] = $input['info'][$key];
+                }
             }
         }
         $mapping['info']['label'] = $mapping['info']['label'] ?? $this->currentName;
