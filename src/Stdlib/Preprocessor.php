@@ -1,0 +1,457 @@
+<?php declare(strict_types=1);
+
+/**
+ * Preprocessor - Applies preprocessing transformations before mapping.
+ *
+ * Supports xsl transformations via delegation to ProcessXslt.
+ * The transformation type is determined by file extension.
+ *
+ * Sources can be:
+ * - File paths (absolute or relative)
+ * - Database references: "mapping:5" or "mapping:label"
+ * - Prefixed references: "module:ead/transform.xsl" or "user:custom.xsl"
+ *
+ * @copyright Daniel Berthereau, 2017-2026
+ * @license http://www.cecill.info/licences/Licence_CeCILL_V2.1-en.txt
+ */
+
+namespace Mapper\Stdlib;
+
+use Laminas\Log\Logger;
+use Omeka\Api\Manager as ApiManager;
+
+class Preprocessor
+{
+    /**
+     * @var Logger
+     */
+    protected $logger;
+
+    /**
+     * @var ApiManager|null
+     */
+    protected $api;
+
+    /**
+     * @var ProcessXslt
+     */
+    protected $processXslt;
+
+    /**
+     * @var string Base path for module mapping files (data/mapping/).
+     */
+    protected $basePath;
+
+    /**
+     * @var string Base path for user mapping files (files/mapping/).
+     */
+    protected $userBasePath;
+
+    /**
+     * @var array Supported transformation types by extension.
+     */
+    protected const SUPPORTED_TYPES = [
+        'xsl' => 'xsl',
+        'xslt' => 'xsl',
+    ];
+
+    public function __construct(
+        Logger $logger,
+        ProcessXslt $processXslt,
+        ?ApiManager $api = null,
+        ?string $basePath = null,
+        ?string $userBasePath = null
+    ) {
+        $this->logger = $logger;
+        $this->processXslt = $processXslt;
+        $this->api = $api;
+        $this->basePath = $basePath ?? dirname(__DIR__, 2) . '/data/mapping';
+        $this->userBasePath = $userBasePath;
+    }
+
+    /**
+     * Apply preprocessing transformations to content.
+     *
+     * @param string $content The source content to transform.
+     * @param array $preprocess List of transformation references to apply.
+     * @param array $params Optional parameters to pass to transformations.
+     * @param string|null $context Directory context for relative paths.
+     * @return string|null The transformed content, or null on error.
+     */
+    public function __invoke(
+        string $content,
+        array $preprocess,
+        array $params = [],
+        ?string $context = null
+    ): ?string {
+        return $this->process($content, $preprocess, $params, $context);
+    }
+
+    /**
+     * Apply preprocessing transformations to content.
+     *
+     * @param string $content The source content to transform.
+     * @param array $preprocess List of transformation references to apply.
+     *   References can be:
+     *   - Simple filename: "transform.xsl" (searched in context/common/base)
+     *   - Absolute path: "/path/to/transform.xsl"
+     *   - Database: "mapping:5" or "mapping:My Transform"
+     *   - Module file: "module:ead/transform.xsl"
+     *   - User file: "user:custom.xsl"
+     * @param array $params Optional parameters to pass to transformations.
+     * @param string|null $context Directory context (e.g., "ead" for ead/).
+     * @return string|null The transformed content, or null on error.
+     */
+    public function process(
+        string $content,
+        array $preprocess,
+        array $params = [],
+        ?string $context = null
+    ): ?string {
+        if (empty($preprocess)) {
+            return $content;
+        }
+
+        foreach ($preprocess as $reference) {
+            if (!is_string($reference) || !strlen($reference)) {
+                continue;
+            }
+
+            // Load transformation data (from file or database).
+            $transformData = $this->loadTransformation($reference, $context);
+            if ($transformData === null) {
+                $this->logger->err(
+                    'Preprocessor: transformation not found: {reference}.',
+                    ['reference' => $reference]
+                );
+                return null;
+            }
+
+            $type = $transformData['type'];
+            if (!$type) {
+                $this->logger->warn(
+                    'Preprocessor: unsupported type for {reference}. Supported: {types}.',
+                    ['reference' => $reference, 'types' => implode(', ', array_keys(self::SUPPORTED_TYPES))]
+                );
+                continue;
+            }
+
+            $result = $this->applyTransformation($content, $transformData, $type, $params);
+            if ($result === null) {
+                return null;
+            }
+
+            $content = $result;
+        }
+
+        return $content;
+    }
+
+    /**
+     * Load transformation from reference.
+     *
+     * @param string $reference The transformation reference.
+     * @param string|null $context Directory context for relative paths.
+     * @return array|null Array with transformation data, or null if not found.
+     */
+    protected function loadTransformation(string $reference, ?string $context = null): ?array
+    {
+        // Database reference: "mapping:5" (by ID) or "mapping:label" (by label).
+        if (mb_substr($reference, 0, 8) === 'mapping:' && $this->api) {
+            $identifier = mb_substr($reference, 8);
+            try {
+                // Numeric = ID, otherwise = label.
+                if (ctype_digit($identifier)) {
+                    $mapper = $this->api->read('mappers', ['id' => (int) $identifier])->getContent();
+                } else {
+                    $mappers = $this->api->search('mappers', ['label' => $identifier, 'limit' => 1])->getContent();
+                    $mapper = $mappers[0] ?? null;
+                    if (!$mapper) {
+                        return null;
+                    }
+                }
+                $label = $mapper->label();
+                return [
+                    'content' => $mapper->mapping(),
+                    'filepath' => null,
+                    'type' => $this->getTypeFromExtension($label),
+                    'source' => 'database',
+                    'reference' => $reference,
+                ];
+            } catch (\Exception $e) {
+                return null;
+            }
+        }
+
+        // Prefixed file reference: "module:ead/transform.xsl".
+        if (mb_substr($reference, 0, 7) === 'module:') {
+            $file = mb_substr($reference, 7);
+            $filepath = $this->basePath . '/' . $file;
+            if (is_file($filepath) && is_readable($filepath)) {
+                return [
+                    'content' => null,
+                    'filepath' => $filepath,
+                    'type' => $this->getTypeFromExtension($filepath),
+                    'source' => 'module',
+                    'reference' => $reference,
+                ];
+            }
+            return null;
+        }
+
+        // Prefixed file reference: "user:custom.xsl".
+        if (mb_substr($reference, 0, 5) === 'user:' && $this->userBasePath) {
+            $file = mb_substr($reference, 5);
+            $filepath = $this->userBasePath . '/' . $file;
+            if (is_file($filepath) && is_readable($filepath)) {
+                return [
+                    'content' => null,
+                    'filepath' => $filepath,
+                    'type' => $this->getTypeFromExtension($filepath),
+                    'source' => 'user',
+                    'reference' => $reference,
+                ];
+            }
+            return null;
+        }
+
+        // Resolve file path (absolute or relative).
+        $filepath = $this->resolvePath($reference, $context);
+        if ($filepath) {
+            return [
+                'content' => null,
+                'filepath' => $filepath,
+                'type' => $this->getTypeFromExtension($filepath),
+                'source' => 'file',
+                'reference' => $reference,
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * Get transformation type from file extension.
+     */
+    protected function getTypeFromExtension(string $file): ?string
+    {
+        $extension = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+        return self::SUPPORTED_TYPES[$extension] ?? null;
+    }
+
+    /**
+     * Resolve transformation file path.
+     *
+     * Search order:
+     * 1. Absolute path
+     * 2. Relative to context directory (e.g., ead/)
+     * 3. Relative to common/
+     * 4. Relative to base path (data/mapping/)
+     */
+    protected function resolvePath(string $file, ?string $context = null): ?string
+    {
+        // Absolute path.
+        if (strpos($file, '/') === 0 && is_file($file)) {
+            return $file;
+        }
+
+        // Relative to context directory (same folder as mapping).
+        if ($context) {
+            $contextPath = $this->basePath . '/' . $context . '/' . $file;
+            if (is_file($contextPath)) {
+                return $contextPath;
+            }
+        }
+
+        // Relative to common/.
+        $commonPath = $this->basePath . '/common/' . $file;
+        if (is_file($commonPath)) {
+            return $commonPath;
+        }
+
+        // Relative to base path (data/mapping/).
+        $basePath = $this->basePath . '/' . $file;
+        if (is_file($basePath)) {
+            return $basePath;
+        }
+
+        return null;
+    }
+
+    /**
+     * Apply a single transformation.
+     */
+    protected function applyTransformation(
+        string $content,
+        array $transformData,
+        string $type,
+        array $params
+    ): ?string {
+        switch ($type) {
+            case 'xsl':
+                return $this->applyXsl($content, $transformData, $params);
+            default:
+                $this->logger->err(
+                    'Preprocessor: unknown transformation type {type}.',
+                    ['type' => $type]
+                );
+                return null;
+        }
+    }
+
+    /**
+     * Apply xsl transformation via ProcessXslt delegation.
+     *
+     * @param string $content Source xml content.
+     * @param array $transformData Transformation data with 'filepath' or 'content'.
+     * @param array $params Xsl parameters.
+     * @return string|null Transformed content or null on error.
+     */
+    protected function applyXsl(
+        string $content,
+        array $transformData,
+        array $params
+    ): ?string {
+        $tempDir = $this->processXslt->getTempDir();
+        $inputFile = null;
+        $stylesheetFile = null;
+        $outputFile = null;
+
+        try {
+            // Write source content to temp file.
+            $inputFile = $this->writeTempFile($content, $tempDir, 'omk_src_');
+            if ($inputFile === null) {
+                $this->logger->err('Preprocessor: could not create temp input file.');
+                return null;
+            }
+
+            // Get or create stylesheet file.
+            if (!empty($transformData['filepath'])) {
+                $stylesheetFile = $transformData['filepath'];
+                $stylesheetIsTemp = false;
+            } else {
+                // Database content: write to temp file.
+                $stylesheetFile = $this->writeTempFile(
+                    $transformData['content'],
+                    $tempDir,
+                    'omk_xsl_'
+                );
+                if ($stylesheetFile === null) {
+                    $this->logger->err('Preprocessor: could not create temp xsl file.');
+                    return null;
+                }
+                $stylesheetIsTemp = true;
+            }
+
+            // Process via ProcessXslt.
+            $outputFile = $this->processXslt->process(
+                $inputFile,
+                $stylesheetFile,
+                '',
+                $params
+            );
+
+            if ($outputFile === null || !is_file($outputFile)) {
+                return null;
+            }
+
+            // Read result.
+            $result = file_get_contents($outputFile);
+            return $result !== false ? $result : null;
+        } catch (\Exception $e) {
+            $this->logger->err(
+                'Preprocessor: xsl error for {reference}: {message}',
+                [
+                    'reference' => $transformData['reference'] ?? 'unknown',
+                    'message' => $e->getMessage(),
+                ]
+            );
+            return null;
+        } finally {
+            // Cleanup temp files.
+            if ($inputFile && is_file($inputFile)) {
+                @unlink($inputFile);
+            }
+            if (isset($stylesheetIsTemp) && $stylesheetIsTemp && $stylesheetFile && is_file($stylesheetFile)) {
+                @unlink($stylesheetFile);
+            }
+            if ($outputFile && is_file($outputFile)) {
+                @unlink($outputFile);
+            }
+        }
+    }
+
+    /**
+     * Write content to a temporary file.
+     */
+    protected function writeTempFile(
+        string $content,
+        string $tempDir,
+        string $prefix
+    ): ?string {
+        $filepath = @tempnam($tempDir, $prefix);
+        if ($filepath === false) {
+            return null;
+        }
+        rename($filepath, $filepath . '.xml');
+        $filepath .= '.xml';
+
+        $result = file_put_contents($filepath, $content);
+        if ($result === false) {
+            @unlink($filepath);
+            return null;
+        }
+
+        return $filepath;
+    }
+
+    /**
+     * Set base path for mapping files.
+     */
+    public function setBasePath(string $basePath): self
+    {
+        $this->basePath = $basePath;
+        return $this;
+    }
+
+    /**
+     * Get base path for mapping files.
+     */
+    public function getBasePath(): string
+    {
+        return $this->basePath;
+    }
+
+    /**
+     * Set user base path for user mapping files.
+     */
+    public function setUserBasePath(?string $userBasePath): self
+    {
+        $this->userBasePath = $userBasePath;
+        return $this;
+    }
+
+    /**
+     * Get user base path for mapping files.
+     */
+    public function getUserBasePath(): ?string
+    {
+        return $this->userBasePath;
+    }
+
+    /**
+     * Check if xsl extension is available.
+     */
+    public function isXslAvailable(): bool
+    {
+        return $this->processXslt->isPhpXslAvailable();
+    }
+
+    /**
+     * Check if external xslt processor is configured.
+     */
+    public function hasExternalProcessor(): bool
+    {
+        return $this->processXslt->hasExternalProcessor();
+    }
+}
