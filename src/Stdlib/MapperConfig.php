@@ -801,11 +801,21 @@ class MapperConfig
      */
     protected function loadMappingContent(string $reference)
     {
-        // Database reference: "mapping:5"
+        // Database reference: "mapping:5" (by ID) or "mapping:My Mapping" (by label).
         if (mb_substr($reference, 0, 8) === 'mapping:') {
-            $id = (int) mb_substr($reference, 8);
+            $identifier = mb_substr($reference, 8);
             try {
-                $mapper = $this->api->read('mappers', ['id' => $id])->getContent();
+                // Numeric = ID, otherwise = label.
+                if (ctype_digit($identifier)) {
+                    $mapper = $this->api->read('mappers', ['id' => (int) $identifier])->getContent();
+                } else {
+                    // Search by label.
+                    $mappers = $this->api->search('mappers', ['label' => $identifier, 'limit' => 1])->getContent();
+                    $mapper = $mappers[0] ?? null;
+                    if (!$mapper) {
+                        return null;
+                    }
+                }
                 return $mapper->mapping();
             } catch (\Exception $e) {
                 return null;
