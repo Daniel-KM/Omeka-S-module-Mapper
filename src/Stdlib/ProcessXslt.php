@@ -15,6 +15,7 @@ namespace Mapper\Stdlib;
 use DomDocument;
 use Exception;
 use Laminas\Log\Logger;
+use Common\Stdlib\PsrMessage;
 use XsltProcessor;
 
 class ProcessXslt
@@ -93,22 +94,46 @@ class ProcessXslt
         // Store original url for error messages.
         $this->originalUrl = $url;
 
+        // Validate stylesheet first.
+        if (!$this->isRemote($stylesheet)) {
+            if (!is_file($stylesheet)) {
+                $message = new PsrMessage(
+                    'Stylesheet not found: {stylesheet}.', // @translate
+                    ['stylesheet' => $stylesheet]
+                );
+                $this->logger->err($message->getMessage(), $message->getContext());
+                throw new Exception((string) $message);
+            }
+            if (!is_readable($stylesheet)) {
+                $message = new PsrMessage(
+                    'Stylesheet not readable: {stylesheet}.', // @translate
+                    ['stylesheet' => $stylesheet]
+                );
+                $this->logger->err($message->getMessage(), $message->getContext());
+                throw new Exception((string) $message);
+            }
+        }
+
         // Input should be local to be processed by php or cli.
         $filepath = $url;
         $isRemote = $this->isRemote($url);
         if ($isRemote) {
             $filepath = $this->downloadToTemp($url);
             if ($filepath === null) {
-                throw new Exception(sprintf(
-                    'The remote file %s is not readable or empty.', // @translate
-                    $url
-                ));
+                $message = new PsrMessage(
+                    'The remote file {url} is not readable or empty.', // @translate
+                    ['url' => $url]
+                );
+                $this->logger->err($message->getMessage(), $message->getContext());
+                throw new Exception((string) $message);
             }
         } elseif (!is_file($filepath) || !is_readable($filepath) || !filesize($filepath)) {
-            throw new Exception(sprintf(
-                'The input file %s is not readable or empty.', // @translate
-                $filepath
-            ));
+            $message = new PsrMessage(
+                'The input file {filepath} is not readable or empty.', // @translate
+                ['filepath' => $filepath]
+            );
+            $this->logger->err($message->getMessage(), $message->getContext());
+            throw new Exception((string) $message);
         }
 
         try {
@@ -164,29 +189,44 @@ class ProcessXslt
         string $output = '',
         array $parameters = []
     ): ?string {
+        // Check xsl extension availability.
+        if (!extension_loaded('xsl')) {
+            $message = 'Php xsl extension is not loaded.'; // @translate
+            $this->logger->err($message);
+            throw new Exception($message);
+        }
+
         if (empty($output)) {
             $output = $this->createTempFile();
             if ($output === null) {
-                throw new Exception('Unable to create a temporary file.'); // @translate
+                $message = 'Unable to create a temporary file.'; // @translate
+                $this->logger->err($message);
+                throw new Exception($message);
             }
         }
+
+        libxml_use_internal_errors(true);
 
         $domXml = $this->domXmlLoad($filepath);
         $domXsl = $this->domXmlLoad($stylesheet);
 
-        libxml_use_internal_errors(true);
-
         $proc = new XsltProcessor();
+
+        // Security: disable php functions in xsl by default.
+        if (method_exists($proc, 'setSecurityPrefs')) {
+            $proc->setSecurityPrefs(XSL_SECPREF_DEFAULT);
+        }
+
         $result = $proc->importStyleSheet($domXsl);
         if ($result === false) {
-            $errors = $this->getLibxmlErrors();
+            $errors = $this->getLibxmlErrors() ?: 'Unknown error.';
             libxml_clear_errors();
-            throw new Exception(sprintf(
-                'An error occurred during the xsl transformation of the file %1$s with the sheet %2$s: %3$s', // @translate
-                $this->formatFileRef($filepath),
-                $this->formatFileRef($stylesheet),
-                $errors
-            ));
+            $message = new PsrMessage(
+                'Xsl import error for {input} with {sheet}: {errors}', // @translate
+                ['input' => $this->formatFileRef($filepath), 'sheet' => $this->formatFileRef($stylesheet), 'errors' => $errors]
+            );
+            $this->logger->err($message->getMessage(), $message->getContext());
+            throw new Exception((string) $message);
         }
 
         $proc->setParameter('', $parameters);
@@ -194,30 +234,30 @@ class ProcessXslt
 
         if ($result === false) {
             if (file_exists($output)) {
-                unlink($output);
+                @unlink($output);
             }
-            $errors = $this->getLibxmlErrors();
+            $errors = $this->getLibxmlErrors() ?: 'Unknown error.';
             libxml_clear_errors();
-            throw new Exception(sprintf(
-                'An error occurred during the xsl transformation of the file %1$s with the sheet %2$s: %3$s', // @translate
-                $this->formatFileRef($filepath),
-                $this->formatFileRef($stylesheet),
-                $errors
-            ));
+            $message = new PsrMessage(
+                'Xsl transformation error for {input} with {sheet}: {errors}', // @translate
+                ['input' => $this->formatFileRef($filepath), 'sheet' => $this->formatFileRef($stylesheet), 'errors' => $errors]
+            );
+            $this->logger->err($message->getMessage(), $message->getContext());
+            throw new Exception((string) $message);
         }
 
         if (!file_exists($output) || !filesize($output)) {
             if (file_exists($output)) {
-                unlink($output);
+                @unlink($output);
             }
-            $errors = $this->getLibxmlErrors();
+            $errors = $this->getLibxmlErrors() ?: 'The output is empty.';
             libxml_clear_errors();
-            throw new Exception(sprintf(
-                'An error occurred during the xsl transformation of the file %1$s with the sheet %2$s: %3$s', // @translate
-                $this->formatFileRef($filepath),
-                $this->formatFileRef($stylesheet),
-                $errors ?: 'The output is empty.'
-            ));
+            $message = new PsrMessage(
+                'Xsl transformation error for {input} with {sheet}: {errors}', // @translate
+                ['input' => $this->formatFileRef($filepath), 'sheet' => $this->formatFileRef($stylesheet), 'errors' => $errors]
+            );
+            $this->logger->err($message->getMessage(), $message->getContext());
+            throw new Exception((string) $message);
         }
 
         libxml_clear_errors();
@@ -242,22 +282,36 @@ class ProcessXslt
             if ($xmlContent === false) {
                 $errors = $this->getLibxmlErrors();
                 libxml_clear_errors();
-                throw new Exception(sprintf(
-                    'Could not load %1$s. Verify that you have rights to access this folder and subfolders. %2$s', // @translate
-                    $filepath,
-                    $errors
-                ));
+                $message = new PsrMessage(
+                    'Could not load {filepath}. Check access rights for this folder and sub-folders. {errors}', // @translate
+                    ['filepath' => $filepath, 'errors' => $errors]
+                );
+                $this->logger->err($message->getMessage(), $message->getContext());
+                throw new Exception((string) $message);
             }
             if ($xmlContent === '') {
                 libxml_clear_errors();
-                throw new Exception(sprintf(
-                    'The file "%s" is empty. Process is aborted.', // @translate
-                    $filepath
-                ));
+                $message = new PsrMessage(
+                    'The file {filepath} is empty.', // @translate
+                    ['filepath' => $filepath]
+                );
+                $this->logger->err($message->getMessage(), $message->getContext());
+                throw new Exception((string) $message);
             }
-            $domDocument->loadXML($xmlContent);
+            $loaded = $domDocument->loadXML($xmlContent);
         } else {
-            $domDocument->load($filepath);
+            $loaded = $domDocument->load($filepath);
+        }
+
+        if (!$loaded) {
+            $errors = $this->getLibxmlErrors() ?: 'Unknown error.';
+            libxml_clear_errors();
+            $message = new PsrMessage(
+                'Invalid xml in {file}: {errors}', // @translate
+                ['file' => $this->formatFileRef($filepath), 'errors' => $errors]
+            );
+            $this->logger->err($message->getMessage(), $message->getContext());
+            throw new Exception((string) $message);
         }
 
         return $domDocument;
@@ -277,7 +331,9 @@ class ProcessXslt
         if (empty($output)) {
             $output = $this->createTempFile();
             if ($output === null) {
-                throw new Exception('Unable to create a temporary file.'); // @translate
+                $message = 'Unable to create a temporary file.'; // @translate
+                $this->logger->err($message);
+                throw new Exception($message);
             }
         }
 
@@ -292,28 +348,29 @@ class ProcessXslt
         }
         $result = shell_exec($command . ' 2>&1 1>&-');
 
-        // In Shell, empty is a correct result.
+        // In shell, empty result is success.
         if (!empty($result)) {
             if (file_exists($output)) {
-                unlink($output);
+                @unlink($output);
             }
-            throw new Exception(sprintf(
-                'An error occurred during the xsl transformation of the file %1$s with the sheet %2$s: %3$s', // @translate
-                $this->formatFileRef($filepath),
-                $this->formatFileRef($stylesheet),
-                $result
-            ));
+            $message = new PsrMessage(
+                'Xsl transformation error for {input} with {sheet}: {errors}', // @translate
+                ['input' => $this->formatFileRef($filepath), 'sheet' => $this->formatFileRef($stylesheet), 'errors' => $result]
+            );
+            $this->logger->err($message->getMessage(), $message->getContext());
+            throw new Exception((string) $message);
         }
 
         if (!file_exists($output) || !filesize($output)) {
             if (file_exists($output)) {
-                unlink($output);
+                @unlink($output);
             }
-            throw new Exception(sprintf(
-                'An error occurred during the xsl transformation of the file %1$s with the sheet %2$s: The output is empty.', // @translate
-                $this->formatFileRef($filepath),
-                $this->formatFileRef($stylesheet)
-            ));
+            $message = new PsrMessage(
+                'Xsl transformation error for {input} with {sheet}: {errors}', // @translate
+                ['input' => $this->formatFileRef($filepath), 'sheet' => $this->formatFileRef($stylesheet), 'errors' => 'The output is empty.']
+            );
+            $this->logger->err($message->getMessage(), $message->getContext());
+            throw new Exception((string) $message);
         }
 
         @chmod($output, 0640);
