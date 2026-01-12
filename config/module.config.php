@@ -8,11 +8,13 @@ return [
             Stdlib\PatternParser::class => Stdlib\PatternParser::class,
         ],
         'factories' => [
+            Stdlib\AutomapFields::class => Service\Stdlib\AutomapFieldsFactory::class,
             Stdlib\Mapper::class => Service\Stdlib\MapperFactory::class,
             Stdlib\MapperConfig::class => Service\Stdlib\MapperConfigFactory::class,
             Stdlib\MapNormalizer::class => Service\Stdlib\MapNormalizerFactory::class,
         ],
         'aliases' => [
+            'Mapper\AutomapFields' => Stdlib\AutomapFields::class,
             'Mapper\Mapper' => Stdlib\Mapper::class,
             'Mapper\MapperConfig' => Stdlib\MapperConfig::class,
             'Mapper\MapNormalizer' => Stdlib\MapNormalizer::class,
