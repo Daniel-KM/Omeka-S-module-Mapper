@@ -23,8 +23,10 @@
  *
  * ```
  * [from]  → Source: where data comes from (path, querier, index)
- * [to]    → Target: where data goes (field, property_id, datatype, language, is_public)
- * [mod]   → Modifiers: how to transform data (raw, val, pattern, prepend, append)
+ * [to]    → Target: where data goes
+ *            (field, property_id, datatype, language, is_public)
+ * [mod]   → Modifiers: how to transform data
+ *            (raw, val, pattern, prepend, append)
  * ```
  *
  * ### Example INI format:
@@ -125,11 +127,11 @@ class MapperConfig
     // =========================================================================
 
     /**
-     * Static variables available at initialization (before processing resources).
+     * Static variables available at initialization.
      *
-     * These variables are known when the mapping is first loaded and the source
-     * URL/filename are provided. Params using only these variables can be
-     * evaluated once at initialization.
+     * These variables are known when the mapping is first loaded and the
+     * source URL/filename are provided. Params using only these variables
+     * can be evaluated once at initialization.
      */
     public const STATIC_VARIABLES = [
         'url',
@@ -173,7 +175,8 @@ class MapperConfig
      * Modifier part: defines how to transform data.
      *
      * Input keys: raw, pattern, prepend, append.
-     * Computed keys (from PatternParser): replace, filters, filters_has_replace.
+     * Computed keys (from PatternParser): replace, filters,
+     * filters_has_replace.
      *
      * Note: 'val' is accepted as input but normalized to 'raw'.
      */
@@ -380,7 +383,7 @@ class MapperConfig
      * these params once, replacing the pattern structure with the resulting
      * string value.
      *
-     * @param array $variables Variables to use for evaluation (should contain 'url', 'filename').
+     * @param array $variables Variables for evaluation ('url', 'filename').
      * @param string|null $name Mapping name (defaults to current).
      * @return self
      */
@@ -441,7 +444,7 @@ class MapperConfig
      * - Previously defined params (which can be checked separately)
      * - Literal strings with filters
      *
-     * @param array $paramValue The parsed param value with pattern/replace/filters.
+     * @param array $paramValue The parsed param value with pattern/replace.
      * @return bool True if the param can be evaluated statically.
      */
     protected function isStaticParam(array $paramValue): bool
@@ -470,7 +473,7 @@ class MapperConfig
     /**
      * Evaluate a pattern param with given context.
      *
-     * @param array $paramValue The parsed param value with pattern/replace/filters.
+     * @param array $paramValue Parsed param value with pattern/replace.
      * @param array $context Variables available for replacement.
      * @return string|null Evaluated string or null if evaluation fails.
      */
@@ -554,7 +557,7 @@ class MapperConfig
      *
      * @param mixed $value The value to filter.
      * @param string $filter The filter with optional arguments.
-     * @return string|array The filtered value (array for split, string otherwise).
+     * @return string|array Filtered value (array for split, string else).
      */
     protected function applySimpleFilter($value, string $filter)
     {
@@ -602,7 +605,7 @@ class MapperConfig
                     return $stringValue;
                 }
                 $limit = isset($argList[1]) ? (int) $argList[1] : PHP_INT_MAX;
-                // Return as array for further processing (e.g., by first/last/slice).
+                // Return as array for further processing.
                 return explode($delimiter, $stringValue, $limit);
 
             case 'slice':
@@ -907,7 +910,7 @@ class MapperConfig
             $mapping = $this->parseJson($content, $options);
         }
         // Could be JSON array "[...]" or INI section "[section]".
-        // JSON arrays start with "[" followed by optional whitespace then "{", "[", "]", or a value.
+        // JSON arrays start with "[" then "{", "[", "]", or value.
         // INI sections start with "[" followed by a word character.
         elseif ($firstChar === '[') {
             // Check second non-whitespace character to distinguish.
@@ -958,12 +961,12 @@ class MapperConfig
     /**
      * Process XML include directives.
      *
-     * Replaces `<include mapping="file.xml"/>` with the content of the referenced file.
+     * Replaces `<include mapping="file.xml"/>` with the referenced content.
      *
      * @param string $content The XML content to process.
      * @param array $options Parsing options.
      * @param int $depth Current recursion depth.
-     * @param string|null $baseDir Base directory for resolving relative includes.
+     * @param string|null $baseDir Base directory for relative includes.
      * @return string The processed XML content.
      */
     protected function processXmlIncludes(string $content, array $options, int $depth = 0, ?string $baseDir = null): string
@@ -992,7 +995,7 @@ class MapperConfig
             $includeTag = $match[0];
             $includePath = $match[1];
 
-            // Resolve relative path if baseDir is set and path doesn't start with prefix.
+            // Resolve relative path if baseDir is set.
             $resolvedPath = $includePath;
             if ($baseDir && strpos($includePath, ':') === false && strpos($includePath, '/') !== 0) {
                 $resolvedPath = $baseDir . '/' . $includePath;
@@ -1018,7 +1021,7 @@ class MapperConfig
             }
             $includedContent = $this->processXmlIncludes($includedContent, $options, $depth + 1, $nestedBaseDir);
 
-            // Extract the inner content from the included file (strip <mapping> wrapper).
+            // Extract inner content (strip <mapping> wrapper).
             $innerContent = $this->extractXmlInnerContent($includedContent);
 
             // Replace the include tag with the inner content.
@@ -1029,7 +1032,7 @@ class MapperConfig
     }
 
     /**
-     * Extract the inner content from an XML mapping file (strip outer <mapping> tags).
+     * Extract inner content from an XML mapping file.
      *
      * @param string $content The full XML content.
      * @return string The inner content (between <mapping> and </mapping>).
@@ -1044,7 +1047,7 @@ class MapperConfig
             return trim($match[1]);
         }
 
-        // If no <mapping> wrapper, return as-is (after stripping comments at root level).
+        // If no <mapping> wrapper, return as-is.
         return trim($content);
     }
 
@@ -1058,7 +1061,7 @@ class MapperConfig
      * - Logs deprecation warnings as appropriate
      *
      * @param array $mapping The parsed mapping.
-     * @param array $inheritanceChain Names of mappings in the current chain (for recursion detection).
+     * @param array $inheritanceChain Mapping names in chain (recursion check).
      */
     protected function finalizeMapping(array $mapping, array $inheritanceChain = []): array
     {
@@ -1073,7 +1076,7 @@ class MapperConfig
                 ['name' => $this->currentName ?? 'unknown']
             );
 
-            // Prepend default maps to maps section (default maps should be processed first).
+            // Prepend default maps (they should be processed first).
             $mapping[self::SECTION_MAPS] = array_merge(
                 $mapping[self::SECTION_DEFAULT],
                 $mapping[self::SECTION_MAPS] ?? []
@@ -1115,9 +1118,10 @@ class MapperConfig
         }
 
         // Normalize the reference.
-        // Database references (mapper:5) or prefixed references (module:path) are kept as-is.
+        // Database or prefixed references (mapper:5, module:path) kept as-is.
         if (strpos($baseMapperRef, ':') === false) {
-            // Add default folder prefix if not present (for backward compatibility).
+            // Add default folder prefix if not present.
+            // This check is only used for backward compatibility.
             if (strpos($baseMapperRef, '/') === false) {
                 $baseMapperRef = 'base/' . $baseMapperRef;
             }
@@ -1287,7 +1291,7 @@ class MapperConfig
             } elseif ($section === self::SECTION_TABLES) {
                 if (isset($map[self::MAP_FROM]) && isset($map[self::MAP_TO])) {
                     // Tables format: table.key = value
-                    // MAP_FROM may be string (from parseIniLine) or array (from normalizeMapFromIniParts).
+                    // MAP_FROM may be string or array.
                     $tablePath = is_array($map[self::MAP_FROM])
                         ? ($map[self::MAP_FROM]['path'] ?? '')
                         : $map[self::MAP_FROM];

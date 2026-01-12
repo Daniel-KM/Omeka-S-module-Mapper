@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 
 /**
- * Mapper - Transforms data from source (array/xml) using mapping configurations.
+ * Mapper - Transforms data from source using mapping configurations.
  *
  * @copyright Daniel Berthereau, 2017-2026
  * @license http://www.cecill.info/licences/Licence_CeCILL_V2.1-en.txt
@@ -164,7 +164,7 @@ class Mapper
     /**
      * Set variables available during mapping.
      *
-     * When static variables (url, filename) are set, this method also triggers
+     * When static variables (url, filename) are set, this also triggers
      * evaluation of static params in the current mapping.
      */
     public function setVariables(array $variables): self
@@ -198,7 +198,7 @@ class Mapper
     }
 
     /**
-     * Convert data (array or xml) into an Omeka resource array using the current mapping.
+     * Convert data into an Omeka resource array using the current mapping.
      *
      * @param array|SimpleXMLElement $data Source data to transform.
      * @return array Transformed resource data.
@@ -212,8 +212,8 @@ class Mapper
 
         $result = [];
 
-        // All maps (including former "default" maps) are now in the 'maps' section.
-        // Default maps are detected automatically by the absence of a source path.
+        // All maps (including former "default") are now in 'maps' section.
+        // Default maps are detected by the absence of a source path.
         if (is_array($data)) {
             $result = $this->convertSectionArray('maps', $result, $data);
         } elseif ($data instanceof SimpleXMLElement) {
@@ -224,7 +224,7 @@ class Mapper
     }
 
     /**
-     * Convert a string value using a map definition (without full mapping context).
+     * Convert a string value using a map definition.
      *
      * Useful for simple transformations like spreadsheet cells.
      */
@@ -263,7 +263,7 @@ class Mapper
      *
      * @param array|SimpleXMLElement|DOMDocument $data Source data.
      * @param string $path Query path (XPath, jsdot, etc.).
-     * @param string $querier Querier type: xpath, jsdot, jmespath, jsonpath, index.
+     * @param string $querier Querier: xpath, jsdot, jmespath, jsonpath, index.
      * @return mixed Extracted value(s).
      */
     public function extractValue($data, string $path, string $querier = 'jsdot')
@@ -657,7 +657,7 @@ class Mapper
      * ```php
      * $this->variables = [
      *     'endpoint' => 'https://example.com',
-     *     // Set for current value and default output when there is no pattern.
+     *     // Set for current value; default output when no pattern.
      *     'value' => 'xxx',
      * ];
      * $from = 'yyy';
@@ -673,13 +673,13 @@ class Mapper
      * $output = 'https://example.com/api/id/1850'
      * ```
      *
-     * @param array $from The key, or an array with key "path", where to get the
+     * @param array $from The key, or array with "path", where to get the
      *   data.
      * @param array|string $mod If array, contains the pattern to use, else the
      *   static value itself.
      * @param array $data The resource from which extract the data, if needed,
      *   and any other value.
-     * @param string $querier "jsdot" (default), "jmespath", "jsonpath", "index" or "value".
+     * @param string $querier "jsdot", "jmespath", "jsonpath", "index", "value".
      * @return string The converted value. Without pattern, return the key
      *   "value" from the variables.
      */
@@ -815,7 +815,7 @@ class Mapper
      * ```php
      * $this->variables = [
      *     'endpoint' => 'https://example.com',
-     *     // Set for current value and default output when there is no pattern.
+     *     // Set for current value; default output when no pattern.
      *     'value' => 'xxx',
      * ];
      * $from = 'yyy';
@@ -980,7 +980,7 @@ class Mapper
      * check is skipped.
      *
      * It avoids to return something when there is no transformation or no
-     * value. For example for pattern "pattern for {{ value|trim }} with {{/source/record/data}}",
+     * value. For example "pattern for {{ value|trim }} with {{/xpath}}",
      * if there is no value and no source record data, the transformation
      * returns something, the raw text of the pattern, but this is useless.
      *
@@ -1166,7 +1166,7 @@ class Mapper
                 $stringValue = (string) $v;
                 $result = [];
 
-                // Determine type: use datatype if set, otherwise detect uri/literal.
+                // Determine type: use datatype or detect uri/literal.
                 if ($datatype) {
                     $result['type'] = $datatype;
                 } elseif (filter_var($stringValue, FILTER_VALIDATE_URL)) {
@@ -1253,7 +1253,7 @@ class Mapper
         $fieldKey = $this->mapperConfig->getSectionSetting('params', 'fields.key');
         $fieldValue = $this->mapperConfig->getSectionSetting('params', 'fields.value');
 
-        // Prepare the fields one time when there are fields and field key/value.
+        // Prepare the fields one time when there are fields and key/value.
 
         // Field key is in a subkey of a list of fields. Example content-dm:
         // [key => "title", label => "Title", value => "value"]
