@@ -152,6 +152,121 @@ class ProcessXslt
     }
 
     /**
+     * Apply an xslt stylesheet on xml content and return result as string.
+     *
+     * @param string $xml Xml content to transform.
+     * @param string $stylesheet Path of the stylesheet, or xsl content.
+     * @param array $parameters Parameters array.
+     * @return string|null Transformed content if ok, null on error.
+     * @throws Exception
+     */
+    public function processString(
+        string $xml,
+        string $stylesheet,
+        array $parameters = []
+    ): ?string {
+        if ($xml === '') {
+            $message = 'The xml content is empty.'; // @translate
+            $this->logger->err($message);
+            throw new Exception($message);
+        }
+
+        $inputFile = null;
+        $stylesheetFile = null;
+        $stylesheetIsTemp = false;
+        $outputFile = null;
+
+        try {
+            // Write xml content to temp file.
+            $inputFile = $this->writeTempFile($xml, 'omk_src_');
+            if ($inputFile === null) {
+                $message = 'Unable to create a temporary input file.'; // @translate
+                $this->logger->err($message);
+                throw new Exception($message);
+            }
+
+            // Determine if stylesheet is a path or content.
+            $stylesheetFile = $this->resolveStylesheet($stylesheet);
+            if ($stylesheetFile === null) {
+                // Stylesheet is content, write to temp file.
+                $stylesheetFile = $this->writeTempFile($stylesheet, 'omk_xsl_');
+                if ($stylesheetFile === null) {
+                    $message = 'Unable to create a temporary stylesheet file.'; // @translate
+                    $this->logger->err($message);
+                    throw new Exception($message);
+                }
+                $stylesheetIsTemp = true;
+            }
+
+            // Process via file-based method.
+            $outputFile = $this->process($inputFile, $stylesheetFile, '', $parameters);
+            if ($outputFile === null || !is_file($outputFile)) {
+                return null;
+            }
+
+            // Read and return result.
+            $result = file_get_contents($outputFile);
+            return $result !== false ? $result : null;
+        } finally {
+            // Cleanup temp files.
+            if ($inputFile && is_file($inputFile)) {
+                @unlink($inputFile);
+            }
+            if ($stylesheetIsTemp && $stylesheetFile && is_file($stylesheetFile)) {
+                @unlink($stylesheetFile);
+            }
+            if ($outputFile && is_file($outputFile)) {
+                @unlink($outputFile);
+            }
+        }
+    }
+
+    /**
+     * Resolve stylesheet reference to a file path.
+     *
+     * @param string $stylesheet Path, url, or xsl content.
+     * @return string|null File path if stylesheet is a file/url, null if content.
+     */
+    protected function resolveStylesheet(string $stylesheet): ?string
+    {
+        // Remote url.
+        if ($this->isRemote($stylesheet)) {
+            return $stylesheet;
+        }
+        // Absolute path.
+        if (strpos($stylesheet, '/') === 0 && is_file($stylesheet)) {
+            return $stylesheet;
+        }
+        // Relative path (check in current directory).
+        if (is_file($stylesheet)) {
+            return $stylesheet;
+        }
+        // Not a file, assume it's xsl content.
+        return null;
+    }
+
+    /**
+     * Write content to a temporary file.
+     */
+    protected function writeTempFile(string $content, string $prefix): ?string
+    {
+        $filepath = @tempnam($this->tempDir, $prefix);
+        if ($filepath === false) {
+            return null;
+        }
+        rename($filepath, $filepath . '.xml');
+        $filepath .= '.xml';
+
+        $result = file_put_contents($filepath, $content);
+        if ($result === false) {
+            @unlink($filepath);
+            return null;
+        }
+
+        return $filepath;
+    }
+
+    /**
      * Download a remote file to a temporary location.
      */
     protected function downloadToTemp(string $url): ?string

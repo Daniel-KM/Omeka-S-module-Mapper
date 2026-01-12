@@ -312,52 +312,18 @@ class Preprocessor
         array $transformData,
         array $params
     ): ?string {
-        $tempDir = $this->processXslt->getTempDir();
-        $inputFile = null;
-        $stylesheetFile = null;
-        $outputFile = null;
+        // Use filepath if available, otherwise use database content.
+        $stylesheet = $transformData['filepath'] ?? $transformData['content'] ?? null;
+        if ($stylesheet === null) {
+            $this->logger->err(
+                'Preprocessor: no stylesheet for {reference}.',
+                ['reference' => $transformData['reference'] ?? 'unknown']
+            );
+            return null;
+        }
 
         try {
-            // Write source content to temp file.
-            $inputFile = $this->writeTempFile($content, $tempDir, 'omk_src_');
-            if ($inputFile === null) {
-                $this->logger->err('Preprocessor: could not create temp input file.');
-                return null;
-            }
-
-            // Get or create stylesheet file.
-            if (!empty($transformData['filepath'])) {
-                $stylesheetFile = $transformData['filepath'];
-                $stylesheetIsTemp = false;
-            } else {
-                // Database content: write to temp file.
-                $stylesheetFile = $this->writeTempFile(
-                    $transformData['content'],
-                    $tempDir,
-                    'omk_xsl_'
-                );
-                if ($stylesheetFile === null) {
-                    $this->logger->err('Preprocessor: could not create temp xsl file.');
-                    return null;
-                }
-                $stylesheetIsTemp = true;
-            }
-
-            // Process via ProcessXslt.
-            $outputFile = $this->processXslt->process(
-                $inputFile,
-                $stylesheetFile,
-                '',
-                $params
-            );
-
-            if ($outputFile === null || !is_file($outputFile)) {
-                return null;
-            }
-
-            // Read result.
-            $result = file_get_contents($outputFile);
-            return $result !== false ? $result : null;
+            return $this->processXslt->processString($content, $stylesheet, $params);
         } catch (\Exception $e) {
             $this->logger->err(
                 'Preprocessor: xsl error for {reference}: {message}',
@@ -367,42 +333,7 @@ class Preprocessor
                 ]
             );
             return null;
-        } finally {
-            // Cleanup temp files.
-            if ($inputFile && is_file($inputFile)) {
-                @unlink($inputFile);
-            }
-            if (isset($stylesheetIsTemp) && $stylesheetIsTemp && $stylesheetFile && is_file($stylesheetFile)) {
-                @unlink($stylesheetFile);
-            }
-            if ($outputFile && is_file($outputFile)) {
-                @unlink($outputFile);
-            }
         }
-    }
-
-    /**
-     * Write content to a temporary file.
-     */
-    protected function writeTempFile(
-        string $content,
-        string $tempDir,
-        string $prefix
-    ): ?string {
-        $filepath = @tempnam($tempDir, $prefix);
-        if ($filepath === false) {
-            return null;
-        }
-        rename($filepath, $filepath . '.xml');
-        $filepath .= '.xml';
-
-        $result = file_put_contents($filepath, $content);
-        if ($result === false) {
-            @unlink($filepath);
-            return null;
-        }
-
-        return $filepath;
     }
 
     /**
