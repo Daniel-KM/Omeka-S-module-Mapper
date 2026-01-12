@@ -1240,7 +1240,9 @@ class MapperConfig
         $mapping[self::SECTION_INFO]['label'] = $this->currentName;
 
         $lines = array_filter(array_map('trim', explode("\n", $content)));
-        $section = null;
+
+        // Default section is 'maps' when no section header is specified.
+        $section = self::SECTION_MAPS;
 
         // Set default querier for MapNormalizer.
         $defaultQuerier = null;
