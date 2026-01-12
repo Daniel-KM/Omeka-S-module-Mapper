@@ -196,7 +196,7 @@
                 </xsl:choose>
             </xsl:when>
             <xsl:when test="substring($basepath, string-length($basepath)) = '/' or substring($basepath, string-length($basepath)) = '\'">
-                <xsl:value-of select="substring(translate($basepath, '\', '/'), string-length($basepath) - 1)"/>
+                <xsl:value-of select="substring(translate($basepath, '\', '/'), 1, string-length($basepath) - 1)"/>
             </xsl:when>
             <xsl:otherwise>
                 <xsl:value-of select="translate($basepath, '\', '/')"/>
