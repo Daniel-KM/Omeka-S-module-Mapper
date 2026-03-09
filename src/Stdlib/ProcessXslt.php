@@ -413,7 +413,7 @@ class ProcessXslt
                 $this->logger->err($message->getMessage(), $message->getContext());
                 throw new Exception((string) $message);
             }
-            $loaded = $domDocument->loadXML($xmlContent);
+            $loaded = $domDocument->loadXML($xmlContent, LIBXML_NONET);
         } else {
             $loaded = $domDocument->load($filepath);
         }
