@@ -2,7 +2,7 @@
 
 namespace Mapper\Service\ControllerPlugin;
 
-use Interop\Container\ContainerInterface;
+use Psr\Container\ContainerInterface;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 use Mapper\Mvc\Controller\Plugin\MapperConfigList;
 

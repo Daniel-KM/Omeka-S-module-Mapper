@@ -2,7 +2,7 @@
 
 namespace Mapper\Service\Form\Element;
 
-use Interop\Container\ContainerInterface;
+use Psr\Container\ContainerInterface;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 use Mapper\Form\Element\MapperSelect;
 

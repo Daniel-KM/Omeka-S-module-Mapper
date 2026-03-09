@@ -2,7 +2,7 @@
 
 namespace Mapper\Service\Controller\Admin;
 
-use Interop\Container\ContainerInterface;
+use Psr\Container\ContainerInterface;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 use Mapper\Controller\Admin\IndexController;
 
