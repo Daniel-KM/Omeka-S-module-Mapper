@@ -175,7 +175,7 @@ class IndexController extends AbstractActionController
         try {
             // Don't use searchOne for performance and simplicity.
             $entity = $id ? $this->api()->read('mappers', ['id' => $id])->getContent() : null;
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $entity = null;
         }
 
@@ -235,7 +235,7 @@ class IndexController extends AbstractActionController
         if (is_numeric($id)) {
             try {
                 $entity = $this->api()->read('mappers', ['id' => $id])->getContent();
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 $entity = null;
             }
         } else {

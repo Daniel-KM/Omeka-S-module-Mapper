@@ -638,7 +638,7 @@ class MapNormalizer
         try {
             $element = new \SimpleXMLElement($xml);
             return $this->normalizeFromXmlElement($element, $options);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return self::EMPTY_MAP;
         }
     }
@@ -884,7 +884,7 @@ class MapNormalizer
             foreach ($customVocabs as $customVocab) {
                 $this->customVocabLabels[$customVocab->getLabel()] = $customVocab->getId();
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             // Custom vocab module not installed.
         }
     }

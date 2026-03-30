@@ -151,7 +151,7 @@ trait FilterTrait
                     return $args === ''
                         ? (string) @strtotime($stringValue)
                         : (@date($args, @strtotime($stringValue)) ?: $stringValue);
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                     return $stringValue;
                 }
 
@@ -167,7 +167,7 @@ trait FilterTrait
                 if ($arga) {
                     try {
                         return @vsprintf($stringValue, $arga) ?: $stringValue;
-                    } catch (\Exception $e) {
+                    } catch (\Throwable $e) {
                         return $stringValue;
                     }
                 }

@@ -155,7 +155,7 @@ class MapperSelect extends AbstractGroupByOwnerSelect
             if ($mapping && !empty($mapping['info']['label'])) {
                 return $mapping['info']['label'];
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             // Ignore errors, fallback to filename.
         }
 

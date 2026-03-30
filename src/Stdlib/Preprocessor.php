@@ -178,7 +178,7 @@ class Preprocessor
                     'source' => 'database',
                     'reference' => $reference,
                 ];
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 return null;
             }
         }
@@ -324,7 +324,7 @@ class Preprocessor
 
         try {
             return $this->processXslt->processString($content, $stylesheet, $params);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $this->logger->err(
                 'Preprocessor: xsl error for {reference}: {message}',
                 [

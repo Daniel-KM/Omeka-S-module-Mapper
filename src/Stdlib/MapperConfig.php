@@ -863,7 +863,7 @@ class MapperConfig
                     }
                 }
                 return $mapper->mapping();
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 return null;
             }
         }
@@ -1562,7 +1562,7 @@ class MapperConfig
 
         try {
             $xml = new \SimpleXMLElement($content);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $mapping['has_error'] = true;
             $this->logger->err('Invalid xml mapping: ' . $e->getMessage());
             return $mapping;
@@ -1793,7 +1793,7 @@ class MapperConfig
             try {
                 $xml = new \SimpleXMLElement($map);
                 return $this->parseXmlMap($xml);
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 return [self::MAP_FROM => [], self::MAP_TO => [], self::MAP_MOD => [], 'has_error' => true];
             }
         }

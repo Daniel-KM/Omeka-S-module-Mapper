@@ -73,7 +73,7 @@ class Module extends AbstractModule
             $tableExists = $connection->executeQuery(
                 'SHOW TABLES LIKE "bulk_mapping"'
             )->fetchOne();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return;
         }
 
@@ -96,7 +96,7 @@ class Module extends AbstractModule
                     ['count' => $result]
                 );
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $logger->err(
                 'Mapper: Error during migration from BulkImport: {error}', // @translate
                 ['error' => $e->getMessage()]

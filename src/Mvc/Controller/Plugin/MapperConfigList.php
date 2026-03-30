@@ -89,7 +89,7 @@ class MapperConfigList extends AbstractPlugin
                     foreach ($mappings as $mapping) {
                         $files['mapping']['options']['mapping:' . $mapping->id()] = $mapping->label();
                     }
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                     // API not available or table doesn't exist.
                 }
                 continue;
