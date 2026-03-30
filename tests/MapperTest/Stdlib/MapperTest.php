@@ -524,4 +524,103 @@ class MapperTest extends MapperDbTestCase
         $this->assertSame('index', $parsedMapping['info']['querier']);
         $this->assertNotEmpty($parsedMapping['maps']);
     }
+
+    // =========================================================================
+    // Datatype value conversion tests (issue #9, #23)
+    // =========================================================================
+
+    /**
+     * Mapping with ^^resource should store the datatype correctly.
+     */
+    public function testMappingResourceDatatypeIsPreserved(): void
+    {
+        $mapping = [
+            'info' => ['label' => 'Resource Type Test', 'querier' => 'index'],
+            'maps' => [
+                ['from' => ['index' => 0], 'to' => 'dcterms:isPartOf ^^resource'],
+            ],
+        ];
+
+        $this->mapper->setMapping('resource_type_test', $mapping);
+        $parsed = $this->mapper->getMapping();
+
+        $this->assertContains('resource', $parsed['maps'][0]['to']['datatype']);
+    }
+
+    /**
+     * Mapping with ^^uri should store the datatype correctly.
+     */
+    public function testMappingUriDatatypeIsPreserved(): void
+    {
+        $mapping = [
+            'info' => ['label' => 'URI Type Test', 'querier' => 'index'],
+            'maps' => [
+                ['from' => ['index' => 0], 'to' => 'dcterms:source ^^uri'],
+            ],
+        ];
+
+        $this->mapper->setMapping('uri_type_test', $mapping);
+        $parsed = $this->mapper->getMapping();
+
+        $this->assertContains('uri', $parsed['maps'][0]['to']['datatype']);
+    }
+
+    /**
+     * Mapping with ^^xml should store the datatype correctly.
+     */
+    public function testMappingXmlDatatypeIsPreserved(): void
+    {
+        $mapping = [
+            'info' => ['label' => 'XML Type Test', 'querier' => 'index'],
+            'maps' => [
+                ['from' => ['index' => 0], 'to' => 'bibo:content ^^xml'],
+            ],
+        ];
+
+        $this->mapper->setMapping('xml_type_test', $mapping);
+        $parsed = $this->mapper->getMapping();
+
+        $this->assertContains('xml', $parsed['maps'][0]['to']['datatype']);
+    }
+
+    /**
+     * Mapping with multiple datatypes should store all of them.
+     */
+    public function testMappingMultipleDatatypesArePreserved(): void
+    {
+        $mapping = [
+            'info' => ['label' => 'Multi Test', 'querier' => 'index'],
+            'maps' => [
+                ['from' => ['index' => 0], 'to' => 'dcterms:date ^^numeric:interval ^^numeric:timestamp ^^literal'],
+            ],
+        ];
+
+        $this->mapper->setMapping('multi_datatype_test', $mapping);
+        $parsed = $this->mapper->getMapping();
+
+        $datatypes = $parsed['maps'][0]['to']['datatype'];
+        $this->assertContains('literal', $datatypes);
+        $this->assertGreaterThanOrEqual(2, count($datatypes));
+    }
+
+    /**
+     * Mapping with combined qualifiers should store all of them.
+     */
+    public function testMappingCombinedQualifiersArePreserved(): void
+    {
+        $mapping = [
+            'info' => ['label' => 'Combined Test', 'querier' => 'index'],
+            'maps' => [
+                ['from' => ['index' => 0], 'to' => 'dcterms:subject ^^resource @en §private'],
+            ],
+        ];
+
+        $this->mapper->setMapping('combined_test', $mapping);
+        $parsed = $this->mapper->getMapping();
+
+        $to = $parsed['maps'][0]['to'];
+        $this->assertContains('resource', $to['datatype']);
+        $this->assertSame('en', $to['language']);
+        $this->assertFalse($to['is_public']);
+    }
 }

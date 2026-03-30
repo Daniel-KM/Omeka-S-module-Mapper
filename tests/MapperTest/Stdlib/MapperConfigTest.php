@@ -1220,4 +1220,114 @@ JSON;
         $this->assertSame('dcterms:title', $resultJson['maps'][0]['to']['field']);
         $this->assertSame('dcterms:title', $resultArray['maps'][0]['to']['field']);
     }
+
+    // =========================================================================
+    // Source qualifier transfer tests (issue #9, #23)
+    // =========================================================================
+
+    /**
+     * When mapping params come from a form, the key is the column
+     * header (e.g. "dcterms:isPartOf ^^resource") and the value is
+     * the selected property term. The qualifiers from the header
+     * must be transferred to the target.
+     */
+    public function testNormalizeMapsTransfersSourceDatatypeToTarget(): void
+    {
+        $maps = [
+            'dcterms:isPartOf ^^resource' => ['dcterms:isPartOf'],
+        ];
+        $result = $this->mapperConfig->normalizeMaps($maps);
+
+        $this->assertCount(1, $result);
+        $this->assertContains('resource', $result[0]['to']['datatype']);
+    }
+
+    public function testNormalizeMapsTransfersSourceLanguageToTarget(): void
+    {
+        $maps = [
+            'dcterms:title @fr' => ['dcterms:title'],
+        ];
+        $result = $this->mapperConfig->normalizeMaps($maps);
+
+        $this->assertCount(1, $result);
+        $this->assertSame('fr', $result[0]['to']['language']);
+    }
+
+    public function testNormalizeMapsTransfersSourceVisibilityToTarget(): void
+    {
+        $maps = [
+            'dcterms:rights §private' => ['dcterms:rights'],
+        ];
+        $result = $this->mapperConfig->normalizeMaps($maps);
+
+        $this->assertCount(1, $result);
+        $this->assertFalse($result[0]['to']['is_public']);
+    }
+
+    public function testNormalizeMapsTransfersMultipleDatatypes(): void
+    {
+        $maps = [
+            'isad:unitdate ^^numeric:interval ^^numeric:timestamp ^^literal' => ['isad:unitdate'],
+        ];
+        $result = $this->mapperConfig->normalizeMaps($maps);
+
+        $this->assertCount(1, $result);
+        $datatypes = $result[0]['to']['datatype'];
+        $this->assertContains('literal', $datatypes);
+        // numeric:interval and numeric:timestamp may be normalized
+        // or kept as-is depending on installed modules.
+        $this->assertGreaterThanOrEqual(1, count($datatypes));
+    }
+
+    public function testNormalizeMapsTransfersAllQualifiers(): void
+    {
+        $maps = [
+            'dcterms:subject ^^resource @en §private' => ['dcterms:subject'],
+        ];
+        $result = $this->mapperConfig->normalizeMaps($maps);
+
+        $this->assertCount(1, $result);
+        $this->assertContains('resource', $result[0]['to']['datatype']);
+        $this->assertSame('en', $result[0]['to']['language']);
+        $this->assertFalse($result[0]['to']['is_public']);
+    }
+
+    public function testNormalizeMapsDoesNotOverrideExistingTargetDatatype(): void
+    {
+        $maps = [
+            'dcterms:source ^^resource' => [
+                ['from' => [], 'to' => ['field' => 'dcterms:source', 'datatype' => ['uri']]],
+            ],
+        ];
+        $result = $this->mapperConfig->normalizeMaps($maps);
+
+        // Target already has uri, source qualifier should not override.
+        $this->assertContains('uri', $result[0]['to']['datatype']);
+        $this->assertNotContains('resource', $result[0]['to']['datatype'] ?? []);
+    }
+
+    public function testNormalizeMapsNoTransferForNumericIndex(): void
+    {
+        // When the index is numeric (array list), no transfer.
+        $maps = [
+            'dcterms:title',
+            'dcterms:creator',
+        ];
+        $result = $this->mapperConfig->normalizeMaps($maps);
+
+        $this->assertCount(2, $result);
+        $this->assertSame('dcterms:title', $result[0]['to']['field']);
+    }
+
+    public function testNormalizeMapsNoTransferForPlainStringIndex(): void
+    {
+        // String index without qualifiers: no transfer needed.
+        $maps = [
+            'dcterms:title' => ['dcterms:title'],
+        ];
+        $result = $this->mapperConfig->normalizeMaps($maps);
+
+        $this->assertCount(1, $result);
+        $this->assertSame('dcterms:title', $result[0]['to']['field']);
+    }
 }
