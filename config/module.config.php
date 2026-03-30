@@ -45,6 +45,7 @@ return [
     ],
     'form_elements' => [
         'invokables' => [
+            Form\ConfigForm::class => Form\ConfigForm::class,
             Form\MappingForm::class => Form\MappingForm::class,
             Form\MappingDeleteForm::class => Form\MappingDeleteForm::class,
         ],
@@ -168,6 +169,9 @@ return [
         ],
     ],
     'mapper' => [
+        'config' => [
+            'mapper_xslt_processor' => '',
+        ],
         'field_automap' => require dirname(__DIR__) . '/data/mapping/automap.php',
     ],
 ];

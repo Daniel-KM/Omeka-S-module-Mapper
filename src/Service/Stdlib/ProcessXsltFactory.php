@@ -15,8 +15,7 @@ class ProcessXsltFactory implements FactoryInterface
         // External XSLT processor command (e.g., Saxon for XSLT 2.0/3.0).
         // Setting can be defined in Mapper or fallback to BulkImport setting.
         $settings = $services->get('Omeka\Settings');
-        $command = $settings->get('mapper_xslt_processor')
-            ?? $settings->get('bulkimport_xslt_processor');
+        $command = $settings->get('mapper_xslt_processor');
 
         $config = $services->get('Config');
         $tempDir = $config['temp_dir'] ?? sys_get_temp_dir();
