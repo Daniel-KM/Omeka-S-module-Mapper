@@ -55,6 +55,65 @@ npm install
 npm run build
 ```
 
+- XSLT processor (optional)
+
+An external xslt 2/3 processor (Saxon) is needed only to convert xml files that
+use xsl:import or xslt 2/3 features. Without it, the module falls back to the
+PHP internal xslt 1 processor (`php-xsl`), which is slower and less expressive.
+
+The module auto-detects an installed processor at install time and stores the
+command in `mapper_xslt_processor`. The configuration page allows overriding
+the detected command. Use `%1$s` (input), `%2$s` (stylesheet), `%3$s` (output),
+unescaped.
+
+Packages by distribution:
+
+| Distribution                | Package                            | Notes                                                             |
+|-----------------------------|------------------------------------|-------------------------------------------------------------------|
+| Debian 12/13, Ubuntu 24.04+ | `default-jre libsaxonhe-java`      | Saxon-HE jar in `/usr/share/java/Saxon-HE.jar`                    |
+| Debian ≤ 7, Ubuntu ≤ 14.04  | `libsaxonb-java`                   | Provides the `saxonb-xslt` binary (legacy)                        |
+| Fedora                      | `java-latest-openjdk saxon`        | Jar in `/usr/share/java/saxon-he/` or `/usr/share/java/saxon.jar` |
+| RHEL/CentOS 8/9             | `java-17-openjdk saxon` (EPEL)     | Same as Fedora                                                    |
+| Any distribution (xslt 1)   | `xsltproc` (libxml2)               | Fallback only, equivalent to php-xsl                              |
+
+Install on Debian / Ubuntu:
+```sh
+sudo apt install --reinstall default-jre libsaxonhe-java
+```
+
+Install on Fedora / RHEL / CentOS:
+```sh
+sudo dnf install java-latest-openjdk saxon
+```
+
+Detected command examples:
+
+```sh
+# Debian/Ubuntu (libsaxonhe-java):
+CLASSPATH=/usr/share/java/Saxon-HE.jar java net.sf.saxon.Transform -ext:on -versionmsg:off -warnings:silent -s:%1$s -xsl:%2$s -o:%3$s
+
+# Older Debian/Ubuntu (libsaxonb-java):
+saxonb-xslt -ext:on -versionmsg:off -warnings:silent -s:%1$s -xsl:%2$s -o:%3$s
+
+# Fedora / RHEL / CentOS (jar):
+CLASSPATH=/usr/share/java/saxon.jar java net.sf.saxon.Transform -ext:on -versionmsg:off -warnings:silent -s:%1$s -xsl:%2$s -o:%3$s
+
+# Fedora / RHEL with saxon-scripts:
+saxon -ext:on -versionmsg:off -warnings:silent -s:%1$s -xsl:%2$s -o:%3$s
+
+# xsltproc fallback (xslt 1 only):
+xsltproc -o %3$s %2$s %1$s
+```
+
+Notes:
+- Only Saxon is supported for xslt 2/3. Because Saxon is a Java tool, a JRE must
+  be installed (`openjdk-17-jre-headless`, `default-jre`, etc.).
+- Warnings are processed as errors. The `-warnings:silent` parameter is needed
+  to import with imperfect xsl sheets. It may be removed if your sheets emit no
+  warnings.
+- If no external processor is installed, leave the field empty: PHP's xslt 1
+  processor is used when available.
+
 - For test
 
 The module includes a comprehensive test suite. Due to Laminas application state
