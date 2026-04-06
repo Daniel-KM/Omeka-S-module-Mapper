@@ -170,6 +170,7 @@ return [
     ],
     'mapper' => [
         'config' => [
+            'mapper_xslt_processor_mode' => 'auto',
             'mapper_xslt_processor' => '',
         ],
         'field_automap' => require dirname(__DIR__) . '/data/mapping/automap.php',
