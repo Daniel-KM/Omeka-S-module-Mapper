@@ -88,8 +88,8 @@ class Module extends AbstractModule
     /**
      * Detect an external xslt processor command available on the system.
      *
-     * Returns a sprintf pattern with %1$s (input), %2$s (xsl), %3$s (output) or
-     * null when none is found.
+     * Returns a sprintf pattern with %1$s (input), %2$s (xsl), %3$s (output),
+     * %4$s (already-formatted parameters), or null when none is found.
      */
     public static function detectXsltCommand(): ?string
     {
@@ -108,7 +108,7 @@ class Module extends AbstractModule
             foreach ($jars as $jar) {
                 if (is_file($jar)) {
                     return sprintf(
-                        'CLASSPATH=%s java net.sf.saxon.Transform -ext:on -versionmsg:off -warnings:silent -s:%%1$s -xsl:%%2$s -o:%%3$s',
+                        'CLASSPATH=%s java net.sf.saxon.Transform -ext:on -versionmsg:off -warnings:silent -s:%%1$s -xsl:%%2$s -o:%%3$s %%4$s',
                         $jar
                     );
                 }
@@ -117,17 +117,18 @@ class Module extends AbstractModule
 
         // Older Debian/Ubuntu (libsaxonb-java).
         if (self::whichBinary('saxonb-xslt')) {
-            return 'saxonb-xslt -ext:on -versionmsg:off -warnings:silent -s:%1$s -xsl:%2$s -o:%3$s';
+            return 'saxonb-xslt -ext:on -versionmsg:off -warnings:silent -s:%1$s -xsl:%2$s -o:%3$s %4$s';
         }
 
         // Fedora/RHEL with saxon-scripts.
         if (self::whichBinary('saxon')) {
-            return 'saxon -ext:on -versionmsg:off -warnings:silent -s:%1$s -xsl:%2$s -o:%3$s';
+            return 'saxon -ext:on -versionmsg:off -warnings:silent -s:%1$s -xsl:%2$s -o:%3$s %4$s';
         }
 
         // Last resort: xsltproc (xslt 1.0 only, equivalent to php-xsl).
+        // Params (--stringparam) must come before the stylesheet.
         if (self::whichBinary('xsltproc')) {
-            return 'xsltproc -o %3$s %2$s %1$s';
+            return 'xsltproc -o %3$s %4$s %2$s %1$s';
         }
 
         return null;

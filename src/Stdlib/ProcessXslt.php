@@ -452,14 +452,49 @@ class ProcessXslt
             }
         }
 
-        $command = sprintf(
-            $this->command,
-            escapeshellarg($filepath),
-            escapeshellarg($stylesheet),
-            escapeshellarg($output)
-        );
-        foreach ($parameters as $name => $parameter) {
-            $command .= ' ' . escapeshellarg($name . '=' . $parameter);
+        $isXsltproc = (bool) preg_match('~(^|/|\s)xsltproc(\s|$)~', $this->command);
+        $paramsStr = '';
+        if ($parameters) {
+            $parts = [];
+            if ($isXsltproc) {
+                foreach ($parameters as $name => $parameter) {
+                    $parts[] = '--stringparam ' . escapeshellarg((string) $name) . ' ' . escapeshellarg((string) $parameter);
+                }
+            } else {
+                foreach ($parameters as $name => $parameter) {
+                    $parts[] = escapeshellarg($name . '=' . $parameter);
+                }
+            }
+            $paramsStr = implode(' ', $parts);
+        }
+
+        $hasParamsPlaceholder = strpos($this->command, '%4$s') !== false;
+        if ($hasParamsPlaceholder) {
+            $command = sprintf(
+                $this->command,
+                escapeshellarg($filepath),
+                escapeshellarg($stylesheet),
+                escapeshellarg($output),
+                $paramsStr
+            );
+        } else {
+            $command = sprintf(
+                $this->command,
+                escapeshellarg($filepath),
+                escapeshellarg($stylesheet),
+                escapeshellarg($output)
+            );
+            if ($paramsStr !== '') {
+                if ($isXsltproc) {
+                    $command = str_replace(
+                        escapeshellarg($stylesheet),
+                        $paramsStr . ' ' . escapeshellarg($stylesheet),
+                        $command
+                    );
+                } else {
+                    $command .= ' ' . $paramsStr;
+                }
+            }
         }
         $result = shell_exec($command . ' 2>&1 1>&-');
 
