@@ -17,6 +17,7 @@ use DOMXPath;
 use Laminas\Log\Logger;
 use Laminas\Mvc\I18n\Translator;
 use Omeka\Api\Manager as ApiManager;
+use Omeka\Api\Representation\ValueRepresentation;
 use SimpleXMLElement;
 
 class Mapper
@@ -232,6 +233,59 @@ class Mapper
     {
         if ($value === null) {
             return '';
+        }
+
+        if (empty($map['mod'])) {
+            return $value;
+        }
+
+        $mod = $map['mod'];
+
+        if (isset($mod['raw'])) {
+            return (string) $mod['raw'];
+        }
+
+        if (isset($mod['val'])) {
+            return (string) $mod['val'];
+        }
+
+        $this->setVariable('value', $value);
+        $result = $this->convertTargetToStringArray(['path' => null], $mod, null, 'value');
+
+        if ($result === null || !strlen($result)) {
+            return '';
+        }
+
+        return ($mod['prepend'] ?? '') . $result . ($mod['append'] ?? '');
+    }
+
+    /**
+     * Serialize a value through a map for export direction.
+     *
+     * Symmetric counterpart of convertString(): takes a value (typically from
+     * an Omeka resource) and applies the map's mod (raw/val/pattern/filters/
+     * prepend/append) to produce the target string.
+     *
+     * Accepts a string, a ValueRepresentation, or null. ValueRepresentation is
+     * normalized via value() to honor the underlying datatype (literal text,
+     * uri value, resource id label).
+     *
+     * @param string|ValueRepresentation|null $value Source value to serialize.
+     * @param array $map Map definition (must contain 'mod' or be returned raw).
+     * @return string The serialized result.
+     */
+    public function serializeValue($value, array $map = []): string
+    {
+        if ($value instanceof ValueRepresentation) {
+            $value = (string) $value->value();
+        }
+
+        if ($value === null) {
+            $value = '';
+        } elseif (!is_scalar($value)) {
+            return '';
+        } else {
+            $value = (string) $value;
         }
 
         if (empty($map['mod'])) {

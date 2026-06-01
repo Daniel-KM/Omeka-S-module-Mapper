@@ -30,6 +30,79 @@ trait FilterTrait
     protected $filterVars = [];
 
     /**
+     * Filter metadata for export and reversibility analysis.
+     *
+     * Each entry describes how a filter behaves under inversion:
+     * - reversible: the filter has an inverse that recovers the original value
+     *   exactly (modulo unknown table keys). For lossy filters (upper, trim,
+     *   striptags, slice, length, first, last) this is false.
+     * - inverse: the conventional inverse filter name when one exists, even
+     *   if the round-trip is lossy. Allows tooling to suggest the symmetric
+     *   filter for export mappings (lower → upper, dateRevert → dateRevert).
+     * - category: domain grouping for documentation and UI.
+     *
+     * Used by Mapper::serializeValue() and tooling to validate that an export
+     * mapping does not silently rely on lossy filters in strict mode.
+     */
+    public static function filterMetadata(): array
+    {
+        return [
+            // String case (lossy: original case lost).
+            'upper'      => ['reversible' => false, 'inverse' => 'lower',  'category' => 'string'],
+            'lower'      => ['reversible' => false, 'inverse' => 'upper',  'category' => 'string'],
+            'capitalize' => ['reversible' => false, 'inverse' => null,     'category' => 'string'],
+            'title'      => ['reversible' => false, 'inverse' => null,     'category' => 'string'],
+
+            // String trimming and slicing (lossy: discarded chars lost).
+            'trim'       => ['reversible' => false, 'inverse' => null,     'category' => 'string'],
+            'striptags'  => ['reversible' => false, 'inverse' => null,     'category' => 'string'],
+            'slice'      => ['reversible' => false, 'inverse' => null,     'category' => 'string'],
+            'first'      => ['reversible' => false, 'inverse' => null,     'category' => 'string'],
+            'last'       => ['reversible' => false, 'inverse' => null,     'category' => 'string'],
+            'length'     => ['reversible' => false, 'inverse' => null,     'category' => 'string'],
+            'replace'    => ['reversible' => false, 'inverse' => 'replace','category' => 'string'],
+            'basename'   => ['reversible' => false, 'inverse' => null,     'category' => 'path'],
+            'format'     => ['reversible' => false, 'inverse' => null,     'category' => 'string'],
+            'split'      => ['reversible' => false, 'inverse' => 'join',   'category' => 'array'],
+            'join'       => ['reversible' => false, 'inverse' => 'split',  'category' => 'array'],
+            'implode'    => ['reversible' => false, 'inverse' => 'split',  'category' => 'array'],
+            'implodev'   => ['reversible' => false, 'inverse' => null,     'category' => 'array'],
+
+            // Numeric (lossy: sign and units lost).
+            'abs'        => ['reversible' => false, 'inverse' => null,     'category' => 'numeric'],
+
+            // Encoding (reversible with proper inverse, not yet implemented).
+            'e'          => ['reversible' => true,  'inverse' => null,     'category' => 'encoding'],
+            'escape'     => ['reversible' => true,  'inverse' => null,     'category' => 'encoding'],
+            'url_encode' => ['reversible' => true,  'inverse' => null,     'category' => 'encoding'],
+
+            // Translation (lossy: original key lost).
+            'translate'  => ['reversible' => false, 'inverse' => null,     'category' => 'i18n'],
+
+            // Tables (reversible iff the table is bijective).
+            'table'      => ['reversible' => true,  'inverse' => 'table_reverse', 'category' => 'lookup'],
+            'table_reverse' => ['reversible' => true, 'inverse' => 'table', 'category' => 'lookup'],
+
+            // Dates (involutive on strict format).
+            'date'       => ['reversible' => false, 'inverse' => null,     'category' => 'date'],
+            'dateIso'    => ['reversible' => false, 'inverse' => null,     'category' => 'date'],
+            'dateRevert' => ['reversible' => true,  'inverse' => 'dateRevert', 'category' => 'date'],
+            'dateSql'    => ['reversible' => false, 'inverse' => null,     'category' => 'date'],
+
+            // ISBD composers (lossy: subfield boundaries blurred).
+            'isbdName'      => ['reversible' => false, 'inverse' => null,  'category' => 'unimarc'],
+            'isbdNameColl'  => ['reversible' => false, 'inverse' => null,  'category' => 'unimarc'],
+            'isbdMark'      => ['reversible' => false, 'inverse' => null,  'category' => 'unimarc'],
+
+            // Unimarc converters (theoretically reversible on strict input).
+            'unimarcIndex'             => ['reversible' => false, 'inverse' => null, 'category' => 'unimarc'],
+            'unimarcCoordinates'       => ['reversible' => true,  'inverse' => null, 'category' => 'unimarc'],
+            'unimarcCoordinatesHexa'   => ['reversible' => true,  'inverse' => null, 'category' => 'unimarc'],
+            'unimarcTimeHexa'          => ['reversible' => false, 'inverse' => null, 'category' => 'unimarc'],
+        ];
+    }
+
+    /**
      * Apply filter expressions to transform a value.
      *
      * @param string $pattern The full pattern containing filter expressions.
@@ -233,6 +306,9 @@ trait FilterTrait
             case 'table':
                 return $this->processTableFilter($stringValue, $args);
 
+            case 'table_reverse':
+                return $this->processTableReverseFilter($stringValue, $args);
+
             case 'title':
                 return ucwords($stringValue);
 
@@ -358,6 +434,75 @@ trait FilterTrait
         }
 
         return $value;
+    }
+
+    /**
+     * Process reverse table lookup filter for export direction.
+     *
+     * Symmetric counterpart of processTableFilter(): given a label, returns the
+     * corresponding code. The reverse table is built on the fly by flipping the
+     * original table; collisions on values produce a notice in the logger when
+     * one is available, but the first matching key still wins (deterministic
+     * via array_flip).
+     *
+     * May be:
+     * - inline table: table_reverse({'key': 'value', ...}) — flipped on call
+     * - named table: table_reverse(name) — fetched then flipped
+     */
+    protected function processTableReverseFilter(string $value, string $args): string
+    {
+        $first = mb_substr($args, 0, 1);
+
+        if ($first === '{') {
+            $table = $this->extractAssociative(trim(mb_substr($args, 1, -1)));
+            $reverse = $this->reverseTable($table, '<inline>');
+            return $reverse[$value] ?? $value;
+        }
+
+        $arga = $this->extractList($args);
+        $name = $arga[0] ?? '';
+        if ($name === '' || !isset($this->mapperConfig) || !method_exists($this->mapperConfig, 'getSection')) {
+            return $value;
+        }
+
+        static $cache = [];
+        if (!isset($cache[$name])) {
+            $tables = $this->mapperConfig->getSection('tables');
+            $cache[$name] = $this->reverseTable($tables[$name] ?? [], $name);
+        }
+
+        return $cache[$name][$value] ?? $value;
+    }
+
+    /**
+     * Build a reverse lookup from a table, logging non-bijective collisions.
+     */
+    protected function reverseTable(array $table, string $name): array
+    {
+        if (!$table) {
+            return [];
+        }
+
+        $reverse = [];
+        $collisions = [];
+        foreach ($table as $key => $val) {
+            $val = (string) $val;
+            if (isset($reverse[$val])) {
+                $collisions[$val][] = (string) $key;
+            } else {
+                $reverse[$val] = (string) $key;
+            }
+        }
+
+        if ($collisions && isset($this->logger)) {
+            $this->logger->notice(sprintf(
+                'Mapper: table "%s" is not bijective; %d value(s) map to multiple keys, first wins for table_reverse.', // @translate
+                $name,
+                count($collisions)
+            ));
+        }
+
+        return $reverse;
     }
 
     /**
