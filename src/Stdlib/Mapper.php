@@ -766,19 +766,24 @@ class Mapper
         }
 
         // Check if all source data replacements are empty (semi-strict mode).
-        // If so, skip this value entirely.
+        // If so, skip this value entirely. This only applies to single-brace
+        // {path} data lookups: a pattern made only of {{ variable }} (with no
+        // data path) must not be skipped, since the variables are resolved
+        // above.
         if (!empty($mod['replace'])) {
+            $hasDataReplacement = false;
             $allEmpty = true;
             foreach ($mod['replace'] as $wrappedQuery) {
                 if (mb_substr($wrappedQuery, 0, 2) === '{{') {
                     continue; // Skip context variables.
                 }
+                $hasDataReplacement = true;
                 if (isset($replace[$wrappedQuery]) && strlen($replace[$wrappedQuery])) {
                     $allEmpty = false;
                     break;
                 }
             }
-            if ($allEmpty) {
+            if ($hasDataReplacement && $allEmpty) {
                 return null;
             }
         }
@@ -930,19 +935,24 @@ class Mapper
         }
 
         // Check if all source data replacements are empty (semi-strict mode).
-        // If so, skip this value entirely.
+        // If so, skip this value entirely. This only applies to single-brace
+        // {path} data lookups: a pattern made only of {{ variable }} (with no
+        // data path) must not be skipped, since the variables are resolved
+        // above.
         if (!empty($mod['replace'])) {
+            $hasDataReplacement = false;
             $allEmpty = true;
             foreach ($mod['replace'] as $wrappedQuery) {
                 if (mb_substr($wrappedQuery, 0, 2) === '{{') {
                     continue; // Skip context variables.
                 }
+                $hasDataReplacement = true;
                 if (isset($replace[$wrappedQuery]) && strlen($replace[$wrappedQuery])) {
                     $allEmpty = false;
                     break;
                 }
             }
-            if ($allEmpty) {
+            if ($hasDataReplacement && $allEmpty) {
                 return null;
             }
         }
