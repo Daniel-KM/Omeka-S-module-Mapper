@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Mapping import METS → Omeka.
+
+    Cible la structure produite par omeka_to_mets.xml + .xsl : un
+    <mets:dmdSec> contenant un payload DC dans <mets:xmlData>. Pour
+    des METS produits par d'autres systèmes, voir mets/mets_to_omeka.xsl
+    (preprocess XSL historique).
+
+    @copyright Daniel Berthereau, 2026
+    @license CeCILL 2.1 https://cecill.info/licences/Licence_CeCILL_V2.1-fr.txt
+-->
+
+<mapping>
+
+    <info>
+        <label>METS to Omeka</label>
+        <from>mets</from>
+        <to>resources</to>
+        <querier>xpath</querier>
+    </info>
+
+    <maps>
+
+        <map><from xpath="//mets:xmlData/dc:title"/>       <to field="dcterms:title"/></map>
+        <map><from xpath="//mets:xmlData/dc:creator"/>     <to field="dcterms:creator"/></map>
+        <map><from xpath="//mets:xmlData/dc:contributor"/> <to field="dcterms:contributor"/></map>
+        <map><from xpath="//mets:xmlData/dc:subject"/>     <to field="dcterms:subject"/></map>
+        <map><from xpath="//mets:xmlData/dc:description"/> <to field="dcterms:description"/></map>
+        <map><from xpath="//mets:xmlData/dc:publisher"/>   <to field="dcterms:publisher"/></map>
+        <map><from xpath="//mets:xmlData/dc:date"/>        <to field="dcterms:date"/></map>
+        <map><from xpath="//mets:xmlData/dc:type"/>        <to field="dcterms:type"/></map>
+        <map><from xpath="//mets:xmlData/dc:format"/>      <to field="dcterms:format"/></map>
+        <map><from xpath="//mets:xmlData/dc:identifier"/>  <to field="dcterms:identifier"/></map>
+        <map><from xpath="//mets:xmlData/dc:language"/>    <to field="dcterms:language"/></map>
+        <map><from xpath="//mets:xmlData/dc:rights"/>      <to field="dcterms:rights"/></map>
+
+    </maps>
+
+</mapping>

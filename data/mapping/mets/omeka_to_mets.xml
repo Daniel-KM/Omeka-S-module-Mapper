@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Mapping export Omeka → METS.
+
+    METS profile minimal :
+    - <mets:metsHdr> avec dates système
+    - <mets:dmdSec ID="dmd1"> wrappant un payload DC (MDTYPE="DC")
+
+    Les sections <fileSec> et <structMap> ne sont pas générées par ce
+    mapping ; elles peuvent être ajoutées par un XSL utilisateur dérivé
+    si le profil METS en aval les requiert.
+
+    Référence METS :
+    @link https://www.loc.gov/standards/mets/
+
+    @copyright Daniel Berthereau, 2026
+    @license CeCILL 2.1 https://cecill.info/licences/Licence_CeCILL_V2.1-fr.txt
+-->
+
+<mapping>
+
+    <info>
+        <label>Omeka to METS</label>
+        <from>resources</from>
+        <to>mets</to>
+        <querier>omeka</querier>
+        <postprocess>module:mets/omeka_to_mets.xsl</postprocess>
+    </info>
+
+    <params>
+        <param name="xmlns.dc">http://purl.org/dc/elements/1.1/</param>
+        <param name="xmlns.dcp">urn:omeka-mapper:dc-pivot</param>
+    </params>
+
+    <maps>
+
+        <map><from path="dcterms:title"/>       <to field="/dcp:dc-pivot/dc:title"/></map>
+        <map><from path="dcterms:creator"/>     <to field="/dcp:dc-pivot/dc:creator"/></map>
+        <map><from path="dcterms:contributor"/> <to field="/dcp:dc-pivot/dc:contributor"/></map>
+        <map><from path="dcterms:subject"/>     <to field="/dcp:dc-pivot/dc:subject"/></map>
+        <map><from path="dcterms:description"/> <to field="/dcp:dc-pivot/dc:description"/></map>
+        <map><from path="dcterms:publisher"/>   <to field="/dcp:dc-pivot/dc:publisher"/></map>
+        <map><from path="dcterms:date"/>        <to field="/dcp:dc-pivot/dc:date"/></map>
+        <map><from path="dcterms:type"/>        <to field="/dcp:dc-pivot/dc:type"/></map>
+        <map><from path="dcterms:format"/>      <to field="/dcp:dc-pivot/dc:format"/></map>
+        <map><from path="dcterms:identifier"/>  <to field="/dcp:dc-pivot/dc:identifier"/></map>
+        <map><from path="dcterms:language"/>    <to field="/dcp:dc-pivot/dc:language"/></map>
+        <map><from path="dcterms:rights"/>      <to field="/dcp:dc-pivot/dc:rights"/></map>
+
+    </maps>
+
+</mapping>
