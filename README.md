@@ -766,6 +766,167 @@ $transformedContent = $preprocessor->process($xmlContent, ['mets_to_omeka.xsl'])
 ```
 
 
+Export Pipeline
+---------------
+
+The Mapper module also serializes Omeka resources back into external formats
+(reverse direction of import). The same mapping grammar is used, with `from`
+and `to` swapped at the file level: a mapping `omeka_to_<format>.xml` is the
+symmetric counterpart of `<format>_to_omeka.xml`.
+
+### Querier `omeka`
+
+A small XPath-like dialect reads an Omeka representation directly, without
+relying on `jsonSerialize()` (so paths stay stable when the JSON-LD format
+evolves). Full grammar is in `docs/SYNTAX_INI.md`. Most useful paths:
+
+| Path                                      | Meaning                              |
+|-------------------------------------------|--------------------------------------|
+| `dcterms:title`                           | All values of the property           |
+| `dcterms:title[@language='fra']`          | Filter by language                   |
+| `dcterms:title[@datatype='literal']`      | Filter by datatype                   |
+| `dcterms:title[0]`                        | First value                          |
+| `dcterms:title/@value`                    | Raw text                             |
+| `o:id`, `o:title`, `o:is_public`          | Resource meta                        |
+| `o:resource_class/o:term`                 | Chained meta                         |
+| `o:item_set/dcterms:title`                | Traversal item → item sets           |
+| `o:media[*]/o:original_url`               | All media URLs                       |
+
+### Writing an export mapping
+
+A flat-format export mapping (Dublin Core, JSON, CSV) just needs maps with
+`querier="omeka"` paths on the left and target paths on the right.
+
+```xml
+<mapping>
+    <info>
+        <label>Omeka to OAI-DC</label>
+        <from>resources</from>
+        <to>oai_dc</to>
+        <querier>omeka</querier>
+    </info>
+
+    <params>
+        <param name="xmlns.oai_dc">http://www.openarchives.org/OAI/2.0/oai_dc/</param>
+        <param name="xmlns.dc">http://purl.org/dc/elements/1.1/</param>
+    </params>
+
+    <maps>
+        <map><from path="dcterms:title"/>   <to field="/oai_dc:dc/dc:title"/></map>
+        <map><from path="dcterms:creator"/> <to field="/oai_dc:dc/dc:creator"/></map>
+    </maps>
+</mapping>
+```
+
+Paths beginning with `/` produce a DOMDocument by accumulating containers and
+appending one leaf per value. Sibling maps share their common prefix, so a
+single `<oai_dc:dc>` root element is created. XML namespace declarations come
+from `[params] xmlns.<prefix>`. The runtime auto-detects array vs XML output
+from the first `to.field` ; an explicit `target_type=xml|array` in `[params]`
+overrides it.
+
+A complete OAI-DC mapping (15 DC terms) is shipped at
+`data/mapping/dublin-core/omeka_to_oai_dc.xml`.
+
+### Postprocess (XSL) for structured formats
+
+Highly structured targets (LIDO, MODS, METS, UNIMARC) carry ordering, mixed
+content and complex nesting that a path-accumulation serializer cannot easily
+produce. For these, the recommended pattern is hybrid:
+
+1. The `<maps>` build a simple intermediate pivot DOM (typically Dublin Core
+   wrapped under a custom namespace).
+2. A `<postprocess>` XSL stylesheet transforms the pivot into the final
+   structured document.
+
+```xml
+<info>
+    <label>Omeka to MODS</label>
+    <querier>omeka</querier>
+    <postprocess>module:mods/omeka_to_mods.xsl</postprocess>
+</info>
+```
+
+Postprocess references follow the same resolution rules as preprocess:
+`module:`, `user:`, `mapping:label`, absolute path, or simple filename. The
+chain is applied via the existing XSL processor, so Saxon-HE is used when
+installed (Phase 4 mapping `omeka_to_mods.xml` + `omeka_to_mods.xsl` ships
+as a working example).
+
+#### Postprocess Twig-XML alternative
+
+For users who do not know XSLT, the postprocess chain also accepts
+templates with the `.twig.xml` extension. They are dispatched to a small
+internal engine (`Stdlib\TwigXmlEngine`, no external dependency) that
+supports a deliberately tiny subset of Twig:
+
+```twig
+<oai_dc:dc xmlns:oai_dc="..." xmlns:dc="...">
+  {% for v in dc_title %}
+    <dc:title>{{ v }}</dc:title>
+  {% endfor %}
+  {% if dc_creator %}
+    {% for v in dc_creator %}<dc:creator>{{ v }}</dc:creator>{% endfor %}
+  {% endif %}
+</oai_dc:dc>
+```
+
+Supported syntax: `{{ var|filter }}` (auto-escaped for XML, `|raw` to
+bypass), `{% if expr %}/{% else %}/{% endif %}`, `{% for x in coll %}/{% endfor %}`
+(with `loop.index0`/`loop.index`), dot notation `a.b.c`, `{# … #}`
+comments. Filters reuse the existing `FilterTrait` (upper, lower, trim,
+escape, table, etc.). The pivot DOM is exposed as a context where each
+property is keyed `prefix_localName` with multi-values wrapped in
+arrays so loops are uniform. `data/mapping/dublin-core/omeka_to_oai_dc_twig.xml`
++ `omeka_to_oai_dc.twig.xml` ship as a working example.
+
+### Plugging in BulkExport
+
+`AbstractFieldsFormatter` (and the 7 formatters that inherit from it: Csv,
+Tsv, Ods, Odt, JsonTable, GeoJson, Txt) accepts an optional `mapper` option
+that points to an `omeka_to_<format>` mapping. Each cell value is passed
+through `Mapper::serializeValue()` after the standard formatting:
+
+```php
+$formatter->format($items, $output, ['mapper' => 'my_export_mapping']);
+```
+
+Without the option the formatter behaves as before (full backward-compat).
+
+### Plugging in OaiPmhRepository
+
+Every metadata format inherits from `AbstractMetadata` and now invokes
+`appendMetadataViaMapper()` before its hardcoded fallback. The mapping name
+is resolved in this order:
+
+1. `params['<prefix>']['mapper']`        — per-format admin override
+2. `params['mapper']['<prefix>']`        — nested layout
+3. `omeka_to_<prefix>`                   — convention, opt-in via
+   `params['mapper']['enabled']`
+
+Active in `OaiDc`, `Mods`, `CdwaLite`, `Lido`, `Mets`, `OaiDcterms` and
+`SimpleXml`. Each format falls back to its legacy implementation when the
+mapping is absent or the Mapper module is not installed.
+
+### Public API
+
+```php
+/** @var \Mapper\Stdlib\Mapper $mapper */
+$mapper = $services->get('Mapper\Mapper');
+
+// Per-value (cell-level) export.
+$cell = $mapper->serializeValue($valueOrString, $map);
+
+// Read a property/path on a resource (querier omeka).
+$values = $mapper->extractFromResource($itemRepresentation, 'dcterms:title[@language=\'fra\']');
+
+// Full document export.
+$mapper->setMapping('export_dc', file_get_contents('omeka_to_oai_dc.xml'));
+$result = $mapper->serialize($itemRepresentation);
+// $result is DOMDocument for XML targets, array for JSON/PHP targets.
+```
+
+
 TODO
 ----
 
@@ -793,6 +954,7 @@ From [CopIdRef]:
 - [ ] Modernize js (promise).
 - [ ] Fill a new item (cf. module Advanced Resource Template).
 - [ ] Implement the simplified mapping from the module Advanced Resource Template.
+
 
 
 Warning
