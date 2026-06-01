@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Mapping export Omeka → OAI-DC.
+
+    Sérialise une ressource Omeka au format Dublin Core simple, dans le
+    wrapper OAI-PMH. Les 15 termes Dublin Core sont projetés depuis les
+    propriétés dcterms:* correspondantes.
+
+    Référence :
+    @link https://www.openarchives.org/OAI/openarchivesprotocol.html#dublincore
+    @link https://www.openarchives.org/OAI/2.0/oai_dc.xsd
+
+    @copyright Daniel Berthereau, 2026
+    @license CeCILL 2.1 https://cecill.info/licences/Licence_CeCILL_V2.1-fr.txt
+-->
+
+<mapping>
+
+    <info>
+        <label>Omeka to OAI-DC</label>
+        <from>resources</from>
+        <to>oai_dc</to>
+        <querier>omeka</querier>
+    </info>
+
+    <params>
+        <param name="xmlns.oai_dc">http://www.openarchives.org/OAI/2.0/oai_dc/</param>
+        <param name="xmlns.dc">http://purl.org/dc/elements/1.1/</param>
+        <param name="xmlns.xsi">http://www.w3.org/2001/XMLSchema-instance</param>
+    </params>
+
+    <maps>
+
+        <!-- The 15 Dublin Core elements, in the order recommended by OAI-PMH. -->
+
+        <map>
+            <from path="dcterms:title"/>
+            <to field="/oai_dc:dc/dc:title"/>
+        </map>
+
+        <map>
+            <from path="dcterms:creator"/>
+            <to field="/oai_dc:dc/dc:creator"/>
+        </map>
+
+        <map>
+            <from path="dcterms:subject"/>
+            <to field="/oai_dc:dc/dc:subject"/>
+        </map>
+
+        <map>
+            <from path="dcterms:description"/>
+            <to field="/oai_dc:dc/dc:description"/>
+        </map>
+
+        <map>
+            <from path="dcterms:publisher"/>
+            <to field="/oai_dc:dc/dc:publisher"/>
+        </map>
+
+        <map>
+            <from path="dcterms:contributor"/>
+            <to field="/oai_dc:dc/dc:contributor"/>
+        </map>
+
+        <map>
+            <from path="dcterms:date"/>
+            <to field="/oai_dc:dc/dc:date"/>
+        </map>
+
+        <map>
+            <from path="dcterms:type"/>
+            <to field="/oai_dc:dc/dc:type"/>
+        </map>
+
+        <map>
+            <from path="dcterms:format"/>
+            <to field="/oai_dc:dc/dc:format"/>
+        </map>
+
+        <map>
+            <from path="dcterms:identifier"/>
+            <to field="/oai_dc:dc/dc:identifier"/>
+        </map>
+
+        <map>
+            <from path="dcterms:source"/>
+            <to field="/oai_dc:dc/dc:source"/>
+        </map>
+
+        <map>
+            <from path="dcterms:language"/>
+            <to field="/oai_dc:dc/dc:language"/>
+        </map>
+
+        <map>
+            <from path="dcterms:relation"/>
+            <to field="/oai_dc:dc/dc:relation"/>
+        </map>
+
+        <map>
+            <from path="dcterms:coverage"/>
+            <to field="/oai_dc:dc/dc:coverage"/>
+        </map>
+
+        <map>
+            <from path="dcterms:rights"/>
+            <to field="/oai_dc:dc/dc:rights"/>
+        </map>
+
+    </maps>
+
+</mapping>

@@ -1666,6 +1666,12 @@ class MapperConfig
             } elseif (!empty($from['jmespath'])) {
                 $map[self::MAP_FROM]['querier'] = 'jmespath';
                 $map[self::MAP_FROM]['path'] = (string) $from['jmespath'];
+            } elseif (!empty($from['omeka'])) {
+                $map[self::MAP_FROM]['querier'] = 'omeka';
+                $map[self::MAP_FROM]['path'] = (string) $from['omeka'];
+            } elseif (!empty($from['path'])) {
+                // Generic path: querier inherited from info.querier.
+                $map[self::MAP_FROM]['path'] = (string) $from['path'];
             }
         }
 
