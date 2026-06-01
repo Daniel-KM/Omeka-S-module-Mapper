@@ -588,6 +588,254 @@ class Mapper
     }
 
     /**
+     * Serialize an Omeka resource through the current mapping (export).
+     *
+     * Iterates over [maps] and, for each map, reads from the resource via
+     * extractFromResource(), pipes the value through serializeValue(), and
+     * accumulates the result in either a DOMDocument (for structured XML
+     * targets) or a nested array (for JSON / array targets).
+     *
+     * Format detection:
+     * - explicit: [params] target_type = xml | array
+     * - implicit: if every to.field starts with `/`, output is XML; otherwise
+     *   array (jsdot path).
+     *
+     * Namespaces for the XML output are read from [params] keys
+     * `xmlns.<prefix> = <uri>`.
+     *
+     * @return DOMDocument|array|null DOMDocument for XML, array for JSON/PHP,
+     *   null when no mapping is loaded or no map produced output.
+     */
+    public function serialize(AbstractResourceRepresentation $resource)
+    {
+        $mapping = $this->mapperConfig->getMapping($this->mappingName);
+        if (!$mapping) {
+            return null;
+        }
+
+        $maps = $mapping['maps'] ?? [];
+        if (!$maps) {
+            return null;
+        }
+
+        return $this->detectSerializationFormat($mapping) === 'xml'
+            ? $this->serializeToDom($resource, $mapping)
+            : $this->serializeToArray($resource, $mapping);
+    }
+
+    /**
+     * Decide whether the mapping targets XML (DOMDocument) or array (jsdot).
+     */
+    protected function detectSerializationFormat(array $mapping): string
+    {
+        $params = $mapping['params'] ?? [];
+        if (!empty($params['target_type'])) {
+            $explicit = strtolower((string) $params['target_type']);
+            if (in_array($explicit, ['xml', 'array'], true)) {
+                return $explicit;
+            }
+        }
+        foreach ($mapping['maps'] ?? [] as $map) {
+            $field = $map['to']['field'] ?? '';
+            if ($field !== '') {
+                return ($field[0] === '/') ? 'xml' : 'array';
+            }
+        }
+        return 'array';
+    }
+
+    /**
+     * Build a DOM tree by accumulating to.field XPath-like paths.
+     *
+     * Each map's to.field is split on '/'. The last segment is created once per
+     * value (siblings allowed); preceding segments are containers reused across
+     * maps when their absolute path matches.
+     */
+    protected function serializeToDom(AbstractResourceRepresentation $resource, array $mapping): DOMDocument
+    {
+        $doc = new DOMDocument('1.0', 'UTF-8');
+        $doc->formatOutput = true;
+
+        $namespaces = $this->extractMappingNamespaces($mapping);
+        $containers = [];
+
+        foreach ($mapping['maps'] ?? [] as $map) {
+            $field = $map['to']['field'] ?? '';
+            if ($field === '' || $field[0] !== '/') {
+                continue;
+            }
+
+            $values = $this->resolveMapValuesForExport($resource, $map);
+            if (!$values) {
+                continue;
+            }
+
+            $segments = array_values(array_filter(explode('/', trim($field, '/'))));
+            if (!$segments) {
+                continue;
+            }
+            $leaf = array_pop($segments);
+
+            $parent = $doc;
+            $partial = '';
+            foreach ($segments as $seg) {
+                $partial .= '/' . $seg;
+                if (isset($containers[$partial])) {
+                    $parent = $containers[$partial];
+                    continue;
+                }
+                $newEl = $this->createNamespacedElement($doc, $seg, $namespaces);
+                $parent->appendChild($newEl);
+                $containers[$partial] = $newEl;
+                $parent = $newEl;
+            }
+
+            foreach ($values as $value) {
+                $leafEl = $this->createNamespacedElement($doc, $leaf, $namespaces);
+                $leafEl->appendChild($doc->createTextNode($value));
+                $parent->appendChild($leafEl);
+            }
+        }
+
+        $this->declareNamespacesOnRoot($doc, $namespaces);
+
+        return $doc;
+    }
+
+    /**
+     * Hoist xmlns declarations to the root so children don't repeat them.
+     */
+    protected function declareNamespacesOnRoot(DOMDocument $doc, array $namespaces): void
+    {
+        $root = $doc->documentElement;
+        if (!$root) {
+            return;
+        }
+        foreach ($namespaces as $prefix => $uri) {
+            $root->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:' . $prefix, $uri);
+        }
+    }
+
+    /**
+     * Build a nested array by accumulating to.field jsdot paths.
+     */
+    protected function serializeToArray(AbstractResourceRepresentation $resource, array $mapping): array
+    {
+        $result = [];
+
+        foreach ($mapping['maps'] ?? [] as $map) {
+            $field = $map['to']['field'] ?? '';
+            if ($field === '' || $field[0] === '/') {
+                continue;
+            }
+
+            $values = $this->resolveMapValuesForExport($resource, $map);
+            if (!$values) {
+                continue;
+            }
+
+            $this->arrayPathSet($result, $field, $values);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Extract source values from an Omeka resource and pipe each through
+     * serializeValue(). Default maps (no from.path) honor mod.raw / mod.val.
+     *
+     * @return string[] List of non-empty serialized strings.
+     */
+    protected function resolveMapValuesForExport(AbstractResourceRepresentation $resource, array $map): array
+    {
+        $fromPath = $map['from']['path'] ?? null;
+        $mod = $map['mod'] ?? [];
+
+        if (!$fromPath) {
+            $raw = $mod['raw'] ?? $mod['val'] ?? null;
+            if ($raw === null || $raw === '') {
+                return [];
+            }
+            return [$this->serializeValue((string) $raw, $map)];
+        }
+
+        $sourceValues = $this->extractFromResource($resource, $fromPath);
+        if (!$sourceValues) {
+            return [];
+        }
+
+        $serialized = [];
+        foreach ($sourceValues as $value) {
+            $s = $this->serializeValue($value, $map);
+            if ($s !== '') {
+                $serialized[] = $s;
+            }
+        }
+        return $serialized;
+    }
+
+    /**
+     * Read XML namespace declarations from [params] (key prefix `xmlns.`).
+     */
+    protected function extractMappingNamespaces(array $mapping): array
+    {
+        $params = $mapping['params'] ?? [];
+        $namespaces = [];
+        foreach ($params as $key => $value) {
+            $key = (string) $key;
+            if (strncmp($key, 'xmlns.', 6) === 0 && is_scalar($value)) {
+                $namespaces[substr($key, 6)] = (string) $value;
+            }
+        }
+        return $namespaces;
+    }
+
+    /**
+     * Create an element honoring the namespace prefix when known.
+     */
+    protected function createNamespacedElement(DOMDocument $doc, string $qname, array $namespaces): \DOMElement
+    {
+        $colon = strpos($qname, ':');
+        if ($colon !== false) {
+            $prefix = substr($qname, 0, $colon);
+            if (isset($namespaces[$prefix])) {
+                return $doc->createElementNS($namespaces[$prefix], $qname);
+            }
+        }
+        return $doc->createElement($qname);
+    }
+
+    /**
+     * Set or merge values at a jsdot path inside a nested array.
+     */
+    protected function arrayPathSet(array &$arr, string $path, array $values): void
+    {
+        $segments = array_values(array_filter(explode('.', $path), 'strlen'));
+        if (!$segments) {
+            return;
+        }
+
+        $cursor = &$arr;
+        $lastIndex = count($segments) - 1;
+        foreach ($segments as $i => $seg) {
+            if ($i === $lastIndex) {
+                if (!isset($cursor[$seg])) {
+                    $cursor[$seg] = count($values) === 1 ? $values[0] : array_values($values);
+                } elseif (is_array($cursor[$seg])) {
+                    $cursor[$seg] = array_merge(array_values($cursor[$seg]), array_values($values));
+                } else {
+                    $cursor[$seg] = array_merge([$cursor[$seg]], array_values($values));
+                }
+                return;
+            }
+            if (!isset($cursor[$seg]) || !is_array($cursor[$seg])) {
+                $cursor[$seg] = [];
+            }
+            $cursor = &$cursor[$seg];
+        }
+    }
+
+    /**
      * Extract a value from data using a path and querier.
      *
      * @param array|SimpleXMLElement|DOMDocument $data Source data.
