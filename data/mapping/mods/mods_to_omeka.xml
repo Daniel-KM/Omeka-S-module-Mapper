@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Mapping import MODS → Omeka.
+
+    Parse une sortie MODS 3.7 (telle que produite par omeka_to_mods.xml +
+    omeka_to_mods.xsl) et reconstitue les propriétés dcterms:* sur la
+    ressource cible.
+
+    Note : ce mapping cible la structure produite par notre XSL export.
+    Pour des MODS produits par d'autres systèmes, utiliser plutôt le XSL
+    historique mods/mods_to_omeka.xsl.
+
+    Référence MODS :
+    @link https://www.loc.gov/standards/mods/v3/mods-3-7.xsd
+
+    @copyright Daniel Berthereau, 2026
+    @license CeCILL 2.1 https://cecill.info/licences/Licence_CeCILL_V2.1-fr.txt
+-->
+
+<mapping>
+
+    <info>
+        <label>MODS to Omeka</label>
+        <from>mods</from>
+        <to>resources</to>
+        <querier>xpath</querier>
+    </info>
+
+    <maps>
+
+        <map><from xpath="//mods:title"/>
+            <to field="dcterms:title"/></map>
+
+        <map><from xpath="//mods:name[mods:role/mods:roleTerm='creator']/mods:namePart"/>
+            <to field="dcterms:creator"/></map>
+
+        <map><from xpath="//mods:name[mods:role/mods:roleTerm='contributor']/mods:namePart"/>
+            <to field="dcterms:contributor"/></map>
+
+        <map><from xpath="//mods:typeOfResource"/>
+            <to field="dcterms:type"/></map>
+
+        <map><from xpath="//mods:publisher"/>
+            <to field="dcterms:publisher"/></map>
+
+        <map><from xpath="//mods:dateIssued"/>
+            <to field="dcterms:date"/></map>
+
+        <map><from xpath="//mods:topic"/>
+            <to field="dcterms:subject"/></map>
+
+        <map><from xpath="//mods:abstract"/>
+            <to field="dcterms:description"/></map>
+
+        <map><from xpath="//mods:languageTerm"/>
+            <to field="dcterms:language"/></map>
+
+        <map><from xpath="//mods:accessCondition"/>
+            <to field="dcterms:rights"/></map>
+
+        <map><from xpath="//mods:identifier"/>
+            <to field="dcterms:identifier"/></map>
+
+    </maps>
+
+</mapping>
