@@ -321,6 +321,89 @@ class MapperTest extends MapperDbTestCase
         $this->assertSame('prefix_hello_suffix', $result);
     }
 
+    // serializeValue tests (export direction, mirror of convertString)
+
+    public function testSerializeValueNull(): void
+    {
+        $this->assertSame('', $this->mapper->serializeValue(null));
+    }
+
+    public function testSerializeValueNoMod(): void
+    {
+        $this->assertSame('hello', $this->mapper->serializeValue('hello'));
+    }
+
+    public function testSerializeValueEmptyMod(): void
+    {
+        $this->assertSame('hello', $this->mapper->serializeValue('hello', []));
+    }
+
+    public function testSerializeValueWithRaw(): void
+    {
+        $result = $this->mapper->serializeValue('source', ['mod' => ['raw' => 'fixed']]);
+        $this->assertSame('fixed', $result);
+    }
+
+    public function testSerializeValueWithVal(): void
+    {
+        $result = $this->mapper->serializeValue('source', ['mod' => ['val' => 'replaced']]);
+        $this->assertSame('replaced', $result);
+    }
+
+    public function testSerializeValueWithPrependAppend(): void
+    {
+        $result = $this->mapper->serializeValue('hello', [
+            'mod' => [
+                'prepend' => '<title>',
+                'append' => '</title>',
+                'pattern' => '{{ value }}',
+                'replace' => [],
+            ],
+        ]);
+        $this->assertSame('<title>hello</title>', $result);
+    }
+
+    public function testSerializeValueWithFilter(): void
+    {
+        $result = $this->mapper->serializeValue('hello', [
+            'mod' => [
+                'pattern' => '{{ value|upper }}',
+                'filters' => ['{{ value|upper }}'],
+                'filters_has_replace' => [false],
+            ],
+        ]);
+        $this->assertSame('HELLO', $result);
+    }
+
+    public function testSerializeValueRoundTripUpperLower(): void
+    {
+        // Pure round-trip on bijective normalization is impossible for upper/
+        // lower; this only checks that chained import/export keeps the value
+        // consistent for an already-normalized input.
+        $imported = $this->mapper->convertString('HELLO', [
+            'mod' => [
+                'pattern' => '{{ value|lower }}',
+                'filters' => ['{{ value|lower }}'],
+                'filters_has_replace' => [false],
+            ],
+        ]);
+        $this->assertSame('hello', $imported);
+
+        $exported = $this->mapper->serializeValue($imported, [
+            'mod' => [
+                'pattern' => '{{ value|upper }}',
+                'filters' => ['{{ value|upper }}'],
+                'filters_has_replace' => [false],
+            ],
+        ]);
+        $this->assertSame('HELLO', $exported);
+    }
+
+    public function testSerializeValueWithNonScalar(): void
+    {
+        $this->assertSame('', $this->mapper->serializeValue(new \stdClass()));
+    }
+
     // convert tests with array mapping
     // Note: MapperConfig expects file references for string inputs (INI/XML).
     // These tests use array format which is parsed directly.

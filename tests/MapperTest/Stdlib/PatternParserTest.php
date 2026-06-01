@@ -54,6 +54,19 @@ class PatternParserTest extends TestCase
         $this->assertContains('{second}', $result['replace']);
     }
 
+    /**
+     * Omeka value paths contain "@" (e.g. "@value"), which must be matched as a
+     * single-brace replacement so it is resolved from the data.
+     */
+    public function testSingleBraceReplacementWithOmekaValuePath(): void
+    {
+        $result = $this->parser->parse('{dcterms:title.0.@value}');
+        $this->assertContains('{dcterms:title.0.@value}', $result['replace']);
+
+        $result = $this->parser->parse('item-{dcterms:title.0.@value}');
+        $this->assertContains('{dcterms:title.0.@value}', $result['replace']);
+    }
+
     // Double brace expressions
 
     public function testDoubleBraceReplacement(): void

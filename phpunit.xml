@@ -12,6 +12,7 @@
         <testsuite name="unit">
             <file>tests/MapperTest/Stdlib/FilterTraitTest.php</file>
             <file>tests/MapperTest/Stdlib/PatternParserTest.php</file>
+            <file>tests/MapperTest/Stdlib/TwigXmlEngineTest.php</file>
         </testsuite>
         <!-- MapperConfig tests (core functionality) -->
         <testsuite name="config">
@@ -40,6 +41,10 @@
         <testsuite name="conversion">
             <file>tests/MapperTest/Stdlib/MapperConversionTest.php</file>
             <file>tests/MapperTest/Stdlib/MapperTest.php</file>
+            <file>tests/MapperTest/Stdlib/ExtractFromResourceTest.php</file>
+            <file>tests/MapperTest/Stdlib/SerializeTest.php</file>
+            <file>tests/MapperTest/Stdlib/PostprocessTest.php</file>
+            <file>tests/MapperTest/Stdlib/RoundTripTest.php</file>
         </testsuite>
         <!-- Service factory tests -->
         <testsuite name="service">

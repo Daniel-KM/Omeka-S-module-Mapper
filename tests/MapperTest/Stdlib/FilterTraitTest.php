@@ -483,4 +483,74 @@ class FilterTraitTest extends TestCase
     {
         $this->assertSame('fé', $this->filter->testProcessFilter('café', 'slice(2, 2)'));
     }
+
+    // table_reverse filter (export direction)
+
+    public function testTableReverseInline(): void
+    {
+        $result = $this->filter->testProcessFilter('Female', 'table_reverse({"f", "Female", "m", "Male"})');
+        $this->assertSame('f', $result);
+    }
+
+    public function testTableReverseInlineUnknownReturnsValue(): void
+    {
+        $result = $this->filter->testProcessFilter('Other', 'table_reverse({"f", "Female", "m", "Male"})');
+        $this->assertSame('Other', $result);
+    }
+
+    public function testTableReverseInlineEmptyArgs(): void
+    {
+        $result = $this->filter->testProcessFilter('any', 'table_reverse({})');
+        $this->assertSame('any', $result);
+    }
+
+    public function testTableInlineThenTableReverseRoundTrip(): void
+    {
+        $code = 'f';
+        $forward = $this->filter->testProcessFilter($code, 'table({"f", "Female", "m", "Male"})');
+        $this->assertSame('Female', $forward);
+
+        $back = $this->filter->testProcessFilter($forward, 'table_reverse({"f", "Female", "m", "Male"})');
+        $this->assertSame($code, $back);
+    }
+
+    // filterMetadata
+
+    public function testFilterMetadataExposesAllFilters(): void
+    {
+        $meta = FilterTraitTestClass::filterMetadata();
+        $this->assertIsArray($meta);
+        $this->assertNotEmpty($meta);
+
+        // A few sanity checks on critical entries.
+        $this->assertArrayHasKey('table', $meta);
+        $this->assertArrayHasKey('table_reverse', $meta);
+        $this->assertArrayHasKey('upper', $meta);
+        $this->assertArrayHasKey('lower', $meta);
+
+        foreach ($meta as $name => $info) {
+            $this->assertArrayHasKey('reversible', $info, "Filter $name missing reversible");
+            $this->assertArrayHasKey('inverse', $info, "Filter $name missing inverse");
+            $this->assertArrayHasKey('category', $info, "Filter $name missing category");
+            $this->assertIsBool($info['reversible']);
+        }
+    }
+
+    public function testFilterMetadataLossyFiltersFlaggedNonReversible(): void
+    {
+        $meta = FilterTraitTestClass::filterMetadata();
+        foreach (['upper', 'lower', 'trim', 'striptags', 'first', 'last', 'length', 'slice', 'abs'] as $lossy) {
+            $this->assertFalse($meta[$lossy]['reversible'], "$lossy must be flagged non-reversible");
+        }
+    }
+
+    public function testFilterMetadataInverses(): void
+    {
+        $meta = FilterTraitTestClass::filterMetadata();
+        $this->assertSame('lower', $meta['upper']['inverse']);
+        $this->assertSame('upper', $meta['lower']['inverse']);
+        $this->assertSame('table_reverse', $meta['table']['inverse']);
+        $this->assertSame('table', $meta['table_reverse']['inverse']);
+        $this->assertSame('dateRevert', $meta['dateRevert']['inverse']);
+    }
 }

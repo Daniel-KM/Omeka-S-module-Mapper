@@ -146,6 +146,42 @@ class MapperConversionTest extends MapperDbTestCase
         $this->assertContains('Array Test Title', $titles);
     }
 
+    /**
+     * A source path with a "{{ value }}"-only pattern (no data path) must
+     * resolve, not be skipped by the semi-strict empty check.
+     */
+    public function testConvertArrayWithValueVariablePattern(): void
+    {
+        $data = ['dcterms:title' => [['type' => 'literal', '@value' => 'Hello World']]];
+
+        $this->mapper->setMapping(
+            'value_var',
+            'dcterms:title.0.@value = dcterms:alternative ^^literal ~ pre {{ value }} post'
+        );
+        $result = $this->mapper->convert($data);
+
+        $alternatives = $this->extractValues($result, 'dcterms:alternative');
+        $this->assertContains('pre Hello World post', $alternatives);
+    }
+
+    /**
+     * A default map with a single-brace "{path}" pattern containing an Omeka
+     * "@value" key must resolve from the source data.
+     */
+    public function testConvertArrayWithSingleBraceOmekaPath(): void
+    {
+        $data = ['dcterms:title' => [['type' => 'literal', '@value' => 'Hello World']]];
+
+        $this->mapper->setMapping(
+            'omeka_path',
+            '~ = dcterms:alternative ^^literal ~ id-{dcterms:title.0.@value}'
+        );
+        $result = $this->mapper->convert($data);
+
+        $alternatives = $this->extractValues($result, 'dcterms:alternative');
+        $this->assertContains('id-Hello World', $alternatives);
+    }
+
     public function testConvertArrayWithIndexQuerier(): void
     {
         $data = [
