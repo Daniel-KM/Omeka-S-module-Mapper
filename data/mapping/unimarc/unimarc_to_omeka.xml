@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Mapping import UNIMARC (slim) → Omeka.
+
+    Cible la structure produite par omeka_to_unimarc.xml + .xsl :
+    MARCXML-slim avec datafields UNIMARC. Pour des UNIMARC SRU/Z39.50
+    venant d'autres systèmes, voir unimarc/sru.unimarc_to_resources.xsl.
+
+    Le namespace par défaut MARCXML-slim est résolu via le préfixe
+    "marc" pour les XPath ci-dessous (le doc d'entrée le déclare en
+    namespace par défaut, le module l'expose via auto-registration).
+
+    @copyright Daniel Berthereau, 2026
+    @license CeCILL 2.1 https://cecill.info/licences/Licence_CeCILL_V2.1-fr.txt
+-->
+
+<mapping>
+
+    <info>
+        <label>UNIMARC (slim) to Omeka</label>
+        <from>unimarc</from>
+        <to>resources</to>
+        <querier>xpath</querier>
+    </info>
+
+    <maps>
+
+        <map><from xpath="//*[local-name()='controlfield'][@tag='001']"/>
+            <to field="dcterms:identifier"/></map>
+
+        <map><from xpath="//*[local-name()='datafield'][@tag='200']/*[local-name()='subfield'][@code='a']"/>
+            <to field="dcterms:title"/></map>
+
+        <map><from xpath="//*[local-name()='datafield'][@tag='210']/*[local-name()='subfield'][@code='c']"/>
+            <to field="dcterms:publisher"/></map>
+
+        <map><from xpath="//*[local-name()='datafield'][@tag='210']/*[local-name()='subfield'][@code='d']"/>
+            <to field="dcterms:date"/></map>
+
+        <map><from xpath="//*[local-name()='datafield'][@tag='215']/*[local-name()='subfield'][@code='a']"/>
+            <to field="dcterms:format"/></map>
+
+        <map><from xpath="//*[local-name()='datafield'][@tag='300']/*[local-name()='subfield'][@code='a']"/>
+            <to field="dcterms:description"/></map>
+
+        <map><from xpath="//*[local-name()='datafield'][@tag='606']/*[local-name()='subfield'][@code='a']"/>
+            <to field="dcterms:subject"/></map>
+
+        <map><from xpath="//*[local-name()='datafield'][@tag='700']/*[local-name()='subfield'][@code='a']"/>
+            <to field="dcterms:creator"/></map>
+
+        <map><from xpath="//*[local-name()='datafield'][@tag='702']/*[local-name()='subfield'][@code='a']"/>
+            <to field="dcterms:contributor"/></map>
+
+        <map><from xpath="//*[local-name()='datafield'][@tag='856']/*[local-name()='subfield'][@code='u']"/>
+            <to field="dcterms:source"/></map>
+
+    </maps>
+
+</mapping>

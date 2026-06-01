@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Mapping export Omeka → UNIMARC (XML slim).
+
+    Génère un <record> au format MARCXML-slim avec un leader minimal,
+    un controlfield 001 (identifiant) et des datafields UNIMARC pour
+    les zones les plus courantes :
+
+      200 $a  Titre propre
+      210 $c  Éditeur
+      210 $d  Date de publication
+      215 $a  Format
+      225 $a  Collection (depuis dcterms:isPartOf si présent)
+      300 $a  Note (description)
+      600 $a  Vedette matière personne (n/a ici)
+      606 $a  Vedette matière sujet
+      700 $a  Auteur personne physique (responsabilité principale)
+      702 $a  Auteur personne physique (responsabilité secondaire)
+      856 $u  URL ressource
+
+    Référence UNIMARC :
+    @link https://www.transition-bibliographique.fr/unimarc/manuel-unimarc-format-bibliographique/
+
+    Pour les structures UNIMARC bibliographiques riches, voir
+    unimarc/unimarc_to_omeka.xml et sru.unimarc_to_resources.xsl.
+
+    @copyright Daniel Berthereau, 2026
+    @license CeCILL 2.1 https://cecill.info/licences/Licence_CeCILL_V2.1-fr.txt
+-->
+
+<mapping>
+
+    <info>
+        <label>Omeka to UNIMARC (slim)</label>
+        <from>resources</from>
+        <to>unimarc</to>
+        <querier>omeka</querier>
+        <postprocess>module:unimarc/omeka_to_unimarc.xsl</postprocess>
+    </info>
+
+    <params>
+        <param name="xmlns.dc">http://purl.org/dc/elements/1.1/</param>
+        <param name="xmlns.dcp">urn:omeka-mapper:dc-pivot</param>
+    </params>
+
+    <maps>
+
+        <map><from path="o:id"/>                <to field="/dcp:dc-pivot/dc:identifier"/></map>
+        <map><from path="dcterms:title"/>       <to field="/dcp:dc-pivot/dc:title"/></map>
+        <map><from path="dcterms:creator"/>     <to field="/dcp:dc-pivot/dc:creator"/></map>
+        <map><from path="dcterms:contributor"/> <to field="/dcp:dc-pivot/dc:contributor"/></map>
+        <map><from path="dcterms:publisher"/>   <to field="/dcp:dc-pivot/dc:publisher"/></map>
+        <map><from path="dcterms:date"/>        <to field="/dcp:dc-pivot/dc:date"/></map>
+        <map><from path="dcterms:format"/>      <to field="/dcp:dc-pivot/dc:format"/></map>
+        <map><from path="dcterms:description"/> <to field="/dcp:dc-pivot/dc:description"/></map>
+        <map><from path="dcterms:subject"/>     <to field="/dcp:dc-pivot/dc:subject"/></map>
+        <map><from path="dcterms:source"/>      <to field="/dcp:dc-pivot/dc:source"/></map>
+
+    </maps>
+
+</mapping>
