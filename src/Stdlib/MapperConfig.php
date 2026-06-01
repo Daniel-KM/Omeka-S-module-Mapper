@@ -1572,8 +1572,8 @@ class MapperConfig
             foreach ($xml->info->children() as $element) {
                 $name = $element->getName();
                 // Handle repeatable elements as arrays.
-                if ($name === 'preprocess') {
-                    $mapping['info']['preprocess'][] = (string) $element;
+                if ($name === 'preprocess' || $name === 'postprocess') {
+                    $mapping['info'][$name][] = (string) $element;
                 } else {
                     $mapping['info'][$name] = (string) $element;
                 }

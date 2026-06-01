@@ -61,6 +61,14 @@ class Mapper
     protected $mapperConfig;
 
     /**
+     * Preprocessor reused as a postprocess engine for export. Holds an XSL
+     * chain runner. Optional: when null, mappings cannot declare postprocess.
+     *
+     * @var \Mapper\Stdlib\Preprocessor|null
+     */
+    protected $preprocessor;
+
+    /**
      * @var \Laminas\Mvc\I18n\Translator
      */
     protected $translator;
@@ -124,6 +132,16 @@ class Mapper
     public function getMapperConfig(): MapperConfig
     {
         return $this->mapperConfig;
+    }
+
+    /**
+     * Inject the Preprocessor used to run the [info] postprocess chain after
+     * serialization (XSL transformations on the produced DOM).
+     */
+    public function setPreprocessor(?Preprocessor $preprocessor): self
+    {
+        $this->preprocessor = $preprocessor;
+        return $this;
     }
 
     /**
@@ -618,9 +636,45 @@ class Mapper
             return null;
         }
 
-        return $this->detectSerializationFormat($mapping) === 'xml'
+        $result = $this->detectSerializationFormat($mapping) === 'xml'
             ? $this->serializeToDom($resource, $mapping)
             : $this->serializeToArray($resource, $mapping);
+
+        return $this->applyPostprocess($result, $mapping);
+    }
+
+    /**
+     * Apply the [info] postprocess chain to a serialized result.
+     *
+     * Only DOMDocument outputs are supported for now (the chain runs XSL).
+     * Returns the original result untouched when no postprocess is declared,
+     * the Preprocessor service is missing, or the result is not a DOM.
+     */
+    protected function applyPostprocess($result, array $mapping)
+    {
+        $chain = $mapping['info']['postprocess'] ?? null;
+        if (empty($chain) || !$this->preprocessor || !$result instanceof DOMDocument) {
+            return $result;
+        }
+
+        $xml = $result->saveXML();
+        if (!is_string($xml) || $xml === '') {
+            return $result;
+        }
+
+        $context = $mapping['info']['context'] ?? null;
+        $transformed = $this->preprocessor->process($xml, (array) $chain, [], $context);
+        if (!is_string($transformed) || $transformed === '') {
+            return $result;
+        }
+
+        $newDoc = new DOMDocument('1.0', 'UTF-8');
+        $newDoc->preserveWhiteSpace = false;
+        $newDoc->formatOutput = true;
+        if (!@$newDoc->loadXML($transformed)) {
+            return $result;
+        }
+        return $newDoc;
     }
 
     /**
