@@ -247,11 +247,12 @@ class PatternParser
     protected function findSingleBraceExpressions(string $pattern): array
     {
         $matches = [];
-        // Match {identifier} where identifier is a valid path.
-        // Starts with letter/underscore (unicode-aware), can contain letters,
-        // numbers, underscore, colon, dot, slash, hyphen.
-        // Uses \p{L} for unicode letters and \p{N} for unicode numbers.
-        preg_match_all('/\{[\p{L}_][\p{L}\p{N}_:.\\/\\-]*\}/u', $pattern, $matches);
+        // Match {identifier} where identifier is a valid path. Starts with
+        // letter/underscore (unicode-aware), can contain letters, numbers,
+        // underscore, colon, dot, at sign, slash, hyphen. The at sign is needed
+        // for Omeka value paths like {dcterms:title.0.@value}. Uses \p{L} for
+        // unicode letters and \p{N} for unicode numbers.
+        preg_match_all('/\{[\p{L}_][\p{L}\p{N}_:.@\\/\\-]*\}/u', $pattern, $matches);
         return $matches[0] ?? [];
     }
 
@@ -278,6 +279,6 @@ class PatternParser
         // Remove the outer {{ }}.
         $inner = mb_substr($doubleBrace, 2, -2);
         // Check for valid replacement pattern {identifier} (unicode-aware).
-        return (bool) preg_match('/\{[\p{L}_][\p{L}\p{N}_:.\\/\\-]*\}/u', $inner);
+        return (bool) preg_match('/\{[\p{L}_][\p{L}\p{N}_:.@\\/\\-]*\}/u', $inner);
     }
 }
