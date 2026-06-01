@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Mapping export Omeka → LIDO (profil simple).
+
+    Génère un document LIDO 1.0 minimal couvrant :
+    - lidoRecID (depuis o:id)
+    - objectIdentificationWrap : titres (titleSet/appellationValue),
+      identifiants (objectMeasurementsWrap n'est pas géré ici)
+    - objectClassificationWrap : type (objectWorkType)
+    - eventWrap : création (creator), date
+    - rightsWorkWrap : droits (creditLine)
+
+    Pour le profil français LIDO-MC complet, voir lido/lido.mc.xml
+    (sens import) et un mapping export dérivé à venir.
+
+    Référence LIDO :
+    @link https://lido-schema.org/
+
+    @copyright Daniel Berthereau, 2026
+    @license CeCILL 2.1 https://cecill.info/licences/Licence_CeCILL_V2.1-fr.txt
+-->
+
+<mapping>
+
+    <info>
+        <label>Omeka to LIDO (simple)</label>
+        <from>resources</from>
+        <to>lido</to>
+        <querier>omeka</querier>
+        <postprocess>module:lido/omeka_to_lido.xsl</postprocess>
+    </info>
+
+    <params>
+        <param name="xmlns.dc">http://purl.org/dc/elements/1.1/</param>
+        <param name="xmlns.dcp">urn:omeka-mapper:dc-pivot</param>
+    </params>
+
+    <maps>
+
+        <map><from path="o:id"/>                <to field="/dcp:dc-pivot/dc:identifier"/></map>
+        <map><from path="dcterms:title"/>       <to field="/dcp:dc-pivot/dc:title"/></map>
+        <map><from path="dcterms:creator"/>     <to field="/dcp:dc-pivot/dc:creator"/></map>
+        <map><from path="dcterms:date"/>        <to field="/dcp:dc-pivot/dc:date"/></map>
+        <map><from path="dcterms:type"/>        <to field="/dcp:dc-pivot/dc:type"/></map>
+        <map><from path="dcterms:subject"/>     <to field="/dcp:dc-pivot/dc:subject"/></map>
+        <map><from path="dcterms:description"/> <to field="/dcp:dc-pivot/dc:description"/></map>
+        <map><from path="dcterms:rights"/>      <to field="/dcp:dc-pivot/dc:rights"/></map>
+
+    </maps>
+
+</mapping>

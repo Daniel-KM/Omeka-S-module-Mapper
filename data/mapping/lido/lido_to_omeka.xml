@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Mapping import LIDO → Omeka (profil simple).
+
+    Cible la structure produite par omeka_to_lido.xml + .xsl. Pour des
+    fichiers LIDO produits ailleurs, voir lido/lido.mc.xml (LIDO-MC) ou
+    lido/lido_to_resources.xsl (XSL preprocess générique).
+
+    @copyright Daniel Berthereau, 2026
+    @license CeCILL 2.1 https://cecill.info/licences/Licence_CeCILL_V2.1-fr.txt
+-->
+
+<mapping>
+
+    <info>
+        <label>LIDO (simple) to Omeka</label>
+        <from>lido</from>
+        <to>resources</to>
+        <querier>xpath</querier>
+    </info>
+
+    <maps>
+
+        <map><from xpath="//lido:lidoRecID"/>
+            <to field="dcterms:identifier"/></map>
+
+        <map><from xpath="//lido:titleSet/lido:appellationValue"/>
+            <to field="dcterms:title"/></map>
+
+        <map><from xpath="//lido:objectDescriptionSet/lido:descriptiveNoteValue"/>
+            <to field="dcterms:description"/></map>
+
+        <map><from xpath="//lido:subjectSet/lido:displaySubject"/>
+            <to field="dcterms:subject"/></map>
+
+        <map><from xpath="//lido:objectWorkType/lido:term"/>
+            <to field="dcterms:type"/></map>
+
+        <map><from xpath="//lido:event[lido:eventType/lido:term='creation']/lido:eventActor/lido:actorInRole/lido:actor/lido:nameActorSet/lido:appellationValue"/>
+            <to field="dcterms:creator"/></map>
+
+        <map><from xpath="//lido:event[lido:eventType/lido:term='creation']/lido:eventDate/lido:displayDate"/>
+            <to field="dcterms:date"/></map>
+
+        <map><from xpath="//lido:rightsWorkSet/lido:creditLine"/>
+            <to field="dcterms:rights"/></map>
+
+    </maps>
+
+</mapping>
