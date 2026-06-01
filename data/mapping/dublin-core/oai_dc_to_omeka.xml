@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Mapping import OAI-DC → Omeka.
+
+    Miroir symétrique d'omeka_to_oai_dc.xml. Lit un document OAI-PMH
+    Dublin Core simple et reconstitue les 15 propriétés dcterms:*
+    correspondantes sur la ressource.
+
+    Référence :
+    @link https://www.openarchives.org/OAI/openarchivesprotocol.html#dublincore
+    @link https://www.openarchives.org/OAI/2.0/oai_dc.xsd
+
+    @copyright Daniel Berthereau, 2026
+    @license CeCILL 2.1 https://cecill.info/licences/Licence_CeCILL_V2.1-fr.txt
+-->
+
+<mapping>
+
+    <info>
+        <label>OAI-DC to Omeka</label>
+        <from>oai_dc</from>
+        <to>resources</to>
+        <querier>xpath</querier>
+    </info>
+
+    <maps>
+
+        <map><from xpath="//dc:title"/>       <to field="dcterms:title"/></map>
+        <map><from xpath="//dc:creator"/>     <to field="dcterms:creator"/></map>
+        <map><from xpath="//dc:subject"/>     <to field="dcterms:subject"/></map>
+        <map><from xpath="//dc:description"/> <to field="dcterms:description"/></map>
+        <map><from xpath="//dc:publisher"/>   <to field="dcterms:publisher"/></map>
+        <map><from xpath="//dc:contributor"/> <to field="dcterms:contributor"/></map>
+        <map><from xpath="//dc:date"/>        <to field="dcterms:date"/></map>
+        <map><from xpath="//dc:type"/>        <to field="dcterms:type"/></map>
+        <map><from xpath="//dc:format"/>      <to field="dcterms:format"/></map>
+        <map><from xpath="//dc:identifier"/>  <to field="dcterms:identifier"/></map>
+        <map><from xpath="//dc:source"/>      <to field="dcterms:source"/></map>
+        <map><from xpath="//dc:language"/>    <to field="dcterms:language"/></map>
+        <map><from xpath="//dc:relation"/>    <to field="dcterms:relation"/></map>
+        <map><from xpath="//dc:coverage"/>    <to field="dcterms:coverage"/></map>
+        <map><from xpath="//dc:rights"/>      <to field="dcterms:rights"/></map>
+
+    </maps>
+
+</mapping>
