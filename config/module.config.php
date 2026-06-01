@@ -14,6 +14,7 @@ return [
             Stdlib\MapNormalizer::class => Service\Stdlib\MapNormalizerFactory::class,
             Stdlib\Preprocessor::class => Service\Stdlib\PreprocessorFactory::class,
             Stdlib\ProcessXslt::class => Service\Stdlib\ProcessXsltFactory::class,
+            Stdlib\TwigXmlEngine::class => Service\Stdlib\TwigXmlEngineFactory::class,
         ],
         'aliases' => [
             'Mapper\AutomapFields' => Stdlib\AutomapFields::class,
@@ -23,6 +24,7 @@ return [
             'Mapper\PatternParser' => Stdlib\PatternParser::class,
             'Mapper\Preprocessor' => Stdlib\Preprocessor::class,
             'Mapper\ProcessXslt' => Stdlib\ProcessXslt::class,
+            'Mapper\TwigXmlEngine' => Stdlib\TwigXmlEngine::class,
         ],
     ],
     'entity_manager' => [

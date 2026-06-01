@@ -69,6 +69,13 @@ class Mapper
     protected $preprocessor;
 
     /**
+     * Optional Twig-XML engine for .twig.xml postprocess templates.
+     *
+     * @var \Mapper\Stdlib\TwigXmlEngine|null
+     */
+    protected $twigXmlEngine;
+
+    /**
      * @var \Laminas\Mvc\I18n\Translator
      */
     protected $translator;
@@ -141,6 +148,16 @@ class Mapper
     public function setPreprocessor(?Preprocessor $preprocessor): self
     {
         $this->preprocessor = $preprocessor;
+        return $this;
+    }
+
+    /**
+     * Inject the Twig-XML engine used to render .twig.xml postprocess templates
+     * as an alternative to XSL.
+     */
+    public function setTwigXmlEngine(?TwigXmlEngine $engine): self
+    {
+        $this->twigXmlEngine = $engine;
         return $this;
     }
 
@@ -646,14 +663,18 @@ class Mapper
     /**
      * Apply the [info] postprocess chain to a serialized result.
      *
-     * Only DOMDocument outputs are supported for now (the chain runs XSL).
-     * Returns the original result untouched when no postprocess is declared,
-     * the Preprocessor service is missing, or the result is not a DOM.
+     * Each reference is dispatched by extension :
+     * - .twig.xml → TwigXmlEngine (when injected)
+     * - .xsl / other → Preprocessor (XSL chain)
+     *
+     * Only DOMDocument outputs are supported. Returns the original result
+     * untouched when no postprocess is declared, when the required engine is
+     * missing, or when any step yields an empty string.
      */
     protected function applyPostprocess($result, array $mapping)
     {
         $chain = $mapping['info']['postprocess'] ?? null;
-        if (empty($chain) || !$this->preprocessor || !$result instanceof DOMDocument) {
+        if (empty($chain) || !$result instanceof DOMDocument) {
             return $result;
         }
 
@@ -663,18 +684,147 @@ class Mapper
         }
 
         $context = $mapping['info']['context'] ?? null;
-        $transformed = $this->preprocessor->process($xml, (array) $chain, [], $context);
-        if (!is_string($transformed) || $transformed === '') {
-            return $result;
+
+        foreach ((array) $chain as $reference) {
+            $reference = trim((string) $reference);
+            if ($reference === '') {
+                continue;
+            }
+            $isTwig = (bool) preg_match('/\.twig\.xml$/i', $reference);
+            $transformed = $isTwig
+                ? $this->applyTwigXmlPostprocess($xml, $reference, $context)
+                : $this->applyXslPostprocess($xml, $reference, $context);
+            if (!is_string($transformed) || $transformed === '') {
+                return $result;
+            }
+            $xml = $transformed;
         }
 
         $newDoc = new DOMDocument('1.0', 'UTF-8');
         $newDoc->preserveWhiteSpace = false;
         $newDoc->formatOutput = true;
-        if (!@$newDoc->loadXML($transformed)) {
+        if (!@$newDoc->loadXML($xml)) {
             return $result;
         }
         return $newDoc;
+    }
+
+    /**
+     * Run a single XSL postprocess step through the injected Preprocessor.
+     */
+    protected function applyXslPostprocess(string $xml, string $reference, ?string $context): ?string
+    {
+        if (!$this->preprocessor) {
+            return null;
+        }
+        return $this->preprocessor->process($xml, [$reference], [], $context);
+    }
+
+    /**
+     * Run a single Twig-XML postprocess step.
+     *
+     * Loads the template via module:/user:/absolute resolution, parses the
+     * pivot XML into a context array, then renders.
+     */
+    protected function applyTwigXmlPostprocess(string $xml, string $reference, ?string $context): ?string
+    {
+        if (!$this->twigXmlEngine) {
+            return null;
+        }
+        $template = $this->loadTwigXmlTemplate($reference, $context);
+        if ($template === null) {
+            return null;
+        }
+        $vars = $this->xmlPivotToContext($xml);
+        return $this->twigXmlEngine->render($template, $vars);
+    }
+
+    /**
+     * Resolve a Twig-XML template reference to its content.
+     *
+     * Supports the same prefixes as the Preprocessor: module:, user:, absolute
+     * path, plain filename relative to the module mapping base or to the given
+     * context folder.
+     */
+    protected function loadTwigXmlTemplate(string $reference, ?string $context): ?string
+    {
+        $basePath = $this->preprocessor ? $this->preprocessor->getBasePath() : null;
+        $userBasePath = $this->preprocessor ? $this->preprocessor->getUserBasePath() : null;
+
+        $candidates = [];
+        if (strncmp($reference, 'module:', 7) === 0 && $basePath) {
+            $candidates[] = $basePath . '/' . substr($reference, 7);
+        } elseif (strncmp($reference, 'user:', 5) === 0 && $userBasePath) {
+            $candidates[] = $userBasePath . '/' . substr($reference, 5);
+        } elseif (strpos($reference, '/') === 0) {
+            $candidates[] = $reference;
+        } else {
+            if ($basePath) {
+                if ($context) {
+                    $candidates[] = $basePath . '/' . $context . '/' . $reference;
+                }
+                $candidates[] = $basePath . '/common/' . $reference;
+                $candidates[] = $basePath . '/' . $reference;
+            }
+        }
+        foreach ($candidates as $path) {
+            if (is_file($path) && is_readable($path)) {
+                $content = @file_get_contents($path);
+                return $content === false ? null : $content;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Convert a pivot XML string into a nested associative array suitable as
+     * Twig-XML rendering context.
+     *
+     * Children are keyed by `prefix_localName` (or just `localName` when
+     * unprefixed), and always wrapped in a numerically indexed array so
+     * templates can iterate uniformly via `{% for x in dc_title %}`.
+     */
+    protected function xmlPivotToContext(string $xml): array
+    {
+        $doc = new DOMDocument();
+        if (!@$doc->loadXML($xml)) {
+            return [];
+        }
+        if (!$doc->documentElement) {
+            return [];
+        }
+        return $this->domElementToContext($doc->documentElement);
+    }
+
+    protected function domElementToContext(\DOMElement $element): array
+    {
+        $result = [];
+        foreach ($element->childNodes as $child) {
+            if (!$child instanceof \DOMElement) {
+                continue;
+            }
+            $key = $child->prefix
+                ? $child->prefix . '_' . $child->localName
+                : $child->localName;
+            $value = $this->domElementHasChildElements($child)
+                ? $this->domElementToContext($child)
+                : $child->textContent;
+            if (!isset($result[$key])) {
+                $result[$key] = [];
+            }
+            $result[$key][] = $value;
+        }
+        return $result;
+    }
+
+    protected function domElementHasChildElements(\DOMElement $element): bool
+    {
+        foreach ($element->childNodes as $child) {
+            if ($child instanceof \DOMElement) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
