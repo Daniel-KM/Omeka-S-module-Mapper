@@ -65,6 +65,8 @@ class TwigXmlEngine
      */
     protected function tokenize(string $template): array
     {
+        // Strip {# ... #} comments first (multi-line, non-greedy).
+        $template = preg_replace('/\{#.*?#\}/s', '', $template);
         // Capture {% ... %} and {{ ... }} delimiters (single-line content).
         $pattern = '/(\{%[^%]*%\}|\{\{[^{}]*\}\})/';
         $parts = preg_split($pattern, $template, -1, PREG_SPLIT_DELIM_CAPTURE);
