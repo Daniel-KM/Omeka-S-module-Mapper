@@ -17,6 +17,8 @@ use DOMXPath;
 use Laminas\Log\Logger;
 use Laminas\Mvc\I18n\Translator;
 use Omeka\Api\Manager as ApiManager;
+use Omeka\Api\Representation\AbstractResourceEntityRepresentation;
+use Omeka\Api\Representation\AbstractResourceRepresentation;
 use Omeka\Api\Representation\ValueRepresentation;
 use SimpleXMLElement;
 
@@ -310,6 +312,279 @@ class Mapper
         }
 
         return ($mod['prepend'] ?? '') . $result . ($mod['append'] ?? '');
+    }
+
+    /**
+     * Extract values from an Omeka resource using an XPath-like path.
+     *
+     * Supports a small subset of XPath geared at Omeka resources rather than
+     * raw JSON-LD, so the path stays stable across JSON-LD evolutions.
+     *
+     * Supported syntax:
+     * - `dcterms:title`                       all values of the property
+     * - `dcterms:title[@language='fra']`      filter by language
+     * - `dcterms:title[@datatype='literal']`  filter by datatype
+     * - `o:id`, `o:title`, `o:is_public`      resource meta
+     * - `o:resource_class/o:term`             chained meta
+     * - `o:resource_template/o:label`         chained meta
+     * - `o:owner/o:email`                     chained meta
+     * - `o:item_set/dcterms:title`            traversal item → item sets
+     * - `o:media[0]/o:original_url`           indexed traversal
+     * - `o:media[*]/o:original_url`           wildcard traversal
+     *
+     * @return array List of scalar values (string|int|bool) ready for
+     *   serializeValue(). ValueRepresentation are normalized via value().
+     */
+    public function extractFromResource(AbstractResourceRepresentation $resource, string $path): array
+    {
+        $path = trim($path);
+        if ($path === '') {
+            return [];
+        }
+
+        $segments = $this->parseOmekaPath($path);
+        if (!$segments) {
+            return [];
+        }
+
+        $current = [$resource];
+        foreach ($segments as $segment) {
+            $current = $this->resolveOmekaSegment($current, $segment);
+            if (!$current) {
+                return [];
+            }
+        }
+
+        $result = [];
+        foreach ($current as $item) {
+            $normalized = $this->normalizeOmekaValue($item);
+            if ($normalized !== null) {
+                $result[] = $normalized;
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * Split an Omeka path on slashes, preserving bracketed predicates.
+     *
+     * `o:media[0]/o:original_url` → ['o:media[0]', 'o:original_url']
+     */
+    protected function parseOmekaPath(string $path): array
+    {
+        $segments = [];
+        $buffer = '';
+        $depth = 0;
+        $len = strlen($path);
+        for ($i = 0; $i < $len; $i++) {
+            $c = $path[$i];
+            if ($c === '[') {
+                $depth++;
+                $buffer .= $c;
+            } elseif ($c === ']') {
+                $depth--;
+                $buffer .= $c;
+            } elseif ($c === '/' && $depth === 0) {
+                if ($buffer !== '') {
+                    $segments[] = $buffer;
+                    $buffer = '';
+                }
+            } else {
+                $buffer .= $c;
+            }
+        }
+        if ($buffer !== '') {
+            $segments[] = $buffer;
+        }
+        return $segments;
+    }
+
+    /**
+     * Resolve one segment against a list of current targets.
+     *
+     * Returns the next list of targets (resources, ValueRepresentation,
+     * scalars). Empty array stops the chain in extractFromResource().
+     */
+    protected function resolveOmekaSegment(array $targets, string $segment): array
+    {
+        // Extract predicate "[...]" if any.
+        $predicate = null;
+        $name = $segment;
+        if (preg_match('~^(?<name>[^\[]+)\[(?<pred>[^\]]+)\]$~', $segment, $m)) {
+            $name = $m['name'];
+            $predicate = trim($m['pred']);
+        }
+
+        $next = [];
+        foreach ($targets as $target) {
+            $resolved = $this->resolveOmekaName($target, $name);
+            if ($resolved === null || $resolved === [] || $resolved === '') {
+                continue;
+            }
+            if (!is_array($resolved)) {
+                $resolved = [$resolved];
+            }
+            if ($predicate !== null) {
+                $resolved = $this->applyOmekaPredicate($resolved, $predicate);
+            }
+            foreach ($resolved as $r) {
+                $next[] = $r;
+            }
+        }
+        return $next;
+    }
+
+    /**
+     * Resolve a name (without predicate) on a single target.
+     *
+     * @return mixed Single value, list of values, or null.
+     */
+    protected function resolveOmekaName($target, string $name)
+    {
+        if ($target instanceof AbstractResourceRepresentation) {
+            return $this->resolveOmekaNameOnResource($target, $name);
+        }
+        if ($target instanceof ValueRepresentation) {
+            // Allow dot-suffixes on a value: @value, @language, @datatype.
+            switch ($name) {
+                case '@value':
+                    return (string) $target->value();
+                case '@language':
+                    return (string) $target->lang();
+                case '@datatype':
+                    return (string) $target->type();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Resolve a name on an Omeka resource representation.
+     */
+    protected function resolveOmekaNameOnResource(AbstractResourceRepresentation $resource, string $name)
+    {
+        // Property term (contains a colon and not a leading "o:" meta).
+        if (strpos($name, ':') !== false && strpos($name, 'o:') !== 0) {
+            if ($resource instanceof AbstractResourceEntityRepresentation) {
+                return $resource->value($name, ['all' => true]) ?: [];
+            }
+            return [];
+        }
+
+        // Omeka meta accessors.
+        switch ($name) {
+            case 'o:id':
+                return method_exists($resource, 'id') ? $resource->id() : null;
+            case 'o:title':
+                return method_exists($resource, 'title') ? $resource->title() : null;
+            case 'o:is_public':
+                return method_exists($resource, 'isPublic') ? $resource->isPublic() : null;
+            case 'o:created':
+                return method_exists($resource, 'created') ? $resource->created() : null;
+            case 'o:modified':
+                return method_exists($resource, 'modified') ? $resource->modified() : null;
+            case 'o:resource_class':
+                return method_exists($resource, 'resourceClass') ? $resource->resourceClass() : null;
+            case 'o:resource_template':
+                return method_exists($resource, 'resourceTemplate') ? $resource->resourceTemplate() : null;
+            case 'o:owner':
+                return method_exists($resource, 'owner') ? $resource->owner() : null;
+            case 'o:item_set':
+                return method_exists($resource, 'itemSets') ? $resource->itemSets() : null;
+            case 'o:media':
+                return method_exists($resource, 'media') ? $resource->media() : null;
+            case 'o:item':
+                return method_exists($resource, 'item') ? $resource->item() : null;
+            case 'o:term':
+                return method_exists($resource, 'term') ? $resource->term() : null;
+            case 'o:label':
+                return method_exists($resource, 'label') ? $resource->label() : null;
+            case 'o:email':
+                return method_exists($resource, 'email') ? $resource->email() : null;
+            case 'o:name':
+                return method_exists($resource, 'name') ? $resource->name() : null;
+            case 'o:original_url':
+                return method_exists($resource, 'originalUrl') ? $resource->originalUrl() : null;
+            case 'o:filename':
+                return method_exists($resource, 'filename') ? $resource->filename() : null;
+            case 'o:source':
+                return method_exists($resource, 'source') ? $resource->source() : null;
+            case 'o:media_type':
+                return method_exists($resource, 'mediaType') ? $resource->mediaType() : null;
+        }
+        return null;
+    }
+
+    /**
+     * Apply a predicate to a list of resolved values.
+     *
+     * Supported predicates:
+     * - `0`, `N`           positional index (zero-based)
+     * - `*`                wildcard (no-op, kept for clarity)
+     * - `@language='fra'`  filter ValueRepresentation by language
+     * - `@datatype='literal'` filter ValueRepresentation by type
+     */
+    protected function applyOmekaPredicate(array $values, string $predicate): array
+    {
+        if ($predicate === '*') {
+            return array_values($values);
+        }
+
+        if (is_numeric($predicate)) {
+            $index = (int) $predicate;
+            $list = array_values($values);
+            return isset($list[$index]) ? [$list[$index]] : [];
+        }
+
+        if (preg_match("~^@(?<key>language|datatype)\s*=\s*['\"](?<val>[^'\"]*)['\"]$~", $predicate, $m)) {
+            $key = $m['key'];
+            $expected = strtolower($m['val']);
+            $filtered = [];
+            foreach ($values as $v) {
+                if (!$v instanceof ValueRepresentation) {
+                    continue;
+                }
+                $actual = $key === 'language'
+                    ? strtolower((string) $v->lang())
+                    : strtolower((string) $v->type());
+                if ($actual === $expected) {
+                    $filtered[] = $v;
+                }
+            }
+            return $filtered;
+        }
+
+        return $values;
+    }
+
+    /**
+     * Normalize a leaf value to a scalar suitable for serializeValue().
+     */
+    protected function normalizeOmekaValue($item)
+    {
+        if ($item === null) {
+            return null;
+        }
+        if (is_scalar($item)) {
+            return $item;
+        }
+        if ($item instanceof ValueRepresentation) {
+            $type = $item->type();
+            if ($type === 'uri' || strpos($type, ':uri') !== false) {
+                return (string) $item->uri() ?: (string) $item->value();
+            }
+            return (string) $item->value();
+        }
+        if ($item instanceof \DateTime) {
+            return $item->format(\DateTime::ATOM);
+        }
+        if (is_object($item) && method_exists($item, '__toString')) {
+            return (string) $item;
+        }
+        if ($item instanceof AbstractResourceRepresentation) {
+            return method_exists($item, 'title') ? (string) $item->title() : (string) ($item->id() ?? '');
+        }
+        return null;
     }
 
     /**
