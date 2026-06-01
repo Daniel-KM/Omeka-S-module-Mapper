@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Mapping export Omeka → OAI-DC (variante Twig-XML).
+
+    Alternative à omeka_to_oai_dc.xml : les <maps> projettent les
+    propriétés vers un pivot DC, puis un template Twig-XML restructure
+    en OAI-DC. Utile pour les utilisateurs qui ne maîtrisent pas XSL.
+
+    Mêmes maps que omeka_to_oai_dc.xml (dumb-down DCMI : terme de base +
+    raffinements vers chaque élément DC simple), mais projetées dans le
+    pivot dc-pivot consommé par le template Twig-XML.
+
+    @copyright Daniel Berthereau, 2026
+    @license CeCILL 2.1 https://cecill.info/licences/Licence_CeCILL_V2.1-fr.txt
+-->
+
+<mapping>
+
+    <info>
+        <label>Omeka to OAI-DC (Twig-XML)</label>
+        <from>resources</from>
+        <to>oai_dc</to>
+        <querier>omeka</querier>
+        <postprocess>module:dublin-core/omeka_to_oai_dc.twig.xml</postprocess>
+    </info>
+
+    <params>
+        <param name="xmlns.dc">http://purl.org/dc/elements/1.1/</param>
+        <param name="xmlns.dcp">urn:omeka-mapper:dc-pivot</param>
+    </params>
+
+    <maps>
+
+        <!-- title ← title, alternative -->
+        <map><from path="dcterms:title"/>             <to field="/dcp:dc-pivot/dc:title"/></map>
+        <map><from path="dcterms:alternative"/>       <to field="/dcp:dc-pivot/dc:title"/></map>
+
+        <!-- creator -->
+        <map><from path="dcterms:creator"/>           <to field="/dcp:dc-pivot/dc:creator"/></map>
+
+        <!-- subject -->
+        <map><from path="dcterms:subject"/>           <to field="/dcp:dc-pivot/dc:subject"/></map>
+
+        <!-- description ← description, abstract, tableOfContents, provenance -->
+        <map><from path="dcterms:description"/>       <to field="/dcp:dc-pivot/dc:description"/></map>
+        <map><from path="dcterms:abstract"/>          <to field="/dcp:dc-pivot/dc:description"/></map>
+        <map><from path="dcterms:tableOfContents"/>   <to field="/dcp:dc-pivot/dc:description"/></map>
+        <map><from path="dcterms:provenance"/>        <to field="/dcp:dc-pivot/dc:description"/></map>
+
+        <!-- publisher -->
+        <map><from path="dcterms:publisher"/>         <to field="/dcp:dc-pivot/dc:publisher"/></map>
+
+        <!-- contributor -->
+        <map><from path="dcterms:contributor"/>       <to field="/dcp:dc-pivot/dc:contributor"/></map>
+
+        <!-- date ← date, created, issued, modified, available, valid,
+             dateAccepted, dateCopyrighted, dateSubmitted -->
+        <map><from path="dcterms:date"/>              <to field="/dcp:dc-pivot/dc:date"/></map>
+        <map><from path="dcterms:created"/>           <to field="/dcp:dc-pivot/dc:date"/></map>
+        <map><from path="dcterms:issued"/>            <to field="/dcp:dc-pivot/dc:date"/></map>
+        <map><from path="dcterms:modified"/>          <to field="/dcp:dc-pivot/dc:date"/></map>
+        <map><from path="dcterms:available"/>         <to field="/dcp:dc-pivot/dc:date"/></map>
+        <map><from path="dcterms:valid"/>             <to field="/dcp:dc-pivot/dc:date"/></map>
+        <map><from path="dcterms:dateAccepted"/>      <to field="/dcp:dc-pivot/dc:date"/></map>
+        <map><from path="dcterms:dateCopyrighted"/>   <to field="/dcp:dc-pivot/dc:date"/></map>
+        <map><from path="dcterms:dateSubmitted"/>     <to field="/dcp:dc-pivot/dc:date"/></map>
+
+        <!-- type -->
+        <map><from path="dcterms:type"/>              <to field="/dcp:dc-pivot/dc:type"/></map>
+
+        <!-- format ← format, extent, medium -->
+        <map><from path="dcterms:format"/>            <to field="/dcp:dc-pivot/dc:format"/></map>
+        <map><from path="dcterms:extent"/>            <to field="/dcp:dc-pivot/dc:format"/></map>
+        <map><from path="dcterms:medium"/>            <to field="/dcp:dc-pivot/dc:format"/></map>
+
+        <!-- identifier ← identifier, bibliographicCitation -->
+        <map><from path="dcterms:identifier"/>            <to field="/dcp:dc-pivot/dc:identifier"/></map>
+        <map><from path="dcterms:bibliographicCitation"/> <to field="/dcp:dc-pivot/dc:identifier"/></map>
+
+        <!-- source -->
+        <map><from path="dcterms:source"/>            <to field="/dcp:dc-pivot/dc:source"/></map>
+
+        <!-- language -->
+        <map><from path="dcterms:language"/>          <to field="/dcp:dc-pivot/dc:language"/></map>
+
+        <!-- relation ← relation, conformsTo, hasFormat, hasPart, hasVersion,
+             isFormatOf, isPartOf, isReferencedBy, isReplacedBy, isRequiredBy,
+             isVersionOf, references, replaces, requires -->
+        <map><from path="dcterms:relation"/>          <to field="/dcp:dc-pivot/dc:relation"/></map>
+        <map><from path="dcterms:conformsTo"/>        <to field="/dcp:dc-pivot/dc:relation"/></map>
+        <map><from path="dcterms:hasFormat"/>         <to field="/dcp:dc-pivot/dc:relation"/></map>
+        <map><from path="dcterms:hasPart"/>           <to field="/dcp:dc-pivot/dc:relation"/></map>
+        <map><from path="dcterms:hasVersion"/>        <to field="/dcp:dc-pivot/dc:relation"/></map>
+        <map><from path="dcterms:isFormatOf"/>        <to field="/dcp:dc-pivot/dc:relation"/></map>
+        <map><from path="dcterms:isPartOf"/>          <to field="/dcp:dc-pivot/dc:relation"/></map>
+        <map><from path="dcterms:isReferencedBy"/>    <to field="/dcp:dc-pivot/dc:relation"/></map>
+        <map><from path="dcterms:isReplacedBy"/>      <to field="/dcp:dc-pivot/dc:relation"/></map>
+        <map><from path="dcterms:isRequiredBy"/>      <to field="/dcp:dc-pivot/dc:relation"/></map>
+        <map><from path="dcterms:isVersionOf"/>       <to field="/dcp:dc-pivot/dc:relation"/></map>
+        <map><from path="dcterms:references"/>        <to field="/dcp:dc-pivot/dc:relation"/></map>
+        <map><from path="dcterms:replaces"/>          <to field="/dcp:dc-pivot/dc:relation"/></map>
+        <map><from path="dcterms:requires"/>          <to field="/dcp:dc-pivot/dc:relation"/></map>
+
+        <!-- coverage ← coverage, spatial, temporal -->
+        <map><from path="dcterms:coverage"/>          <to field="/dcp:dc-pivot/dc:coverage"/></map>
+        <map><from path="dcterms:spatial"/>           <to field="/dcp:dc-pivot/dc:coverage"/></map>
+        <map><from path="dcterms:temporal"/>          <to field="/dcp:dc-pivot/dc:coverage"/></map>
+
+        <!-- rights ← rights, accessRights, license -->
+        <map><from path="dcterms:rights"/>            <to field="/dcp:dc-pivot/dc:rights"/></map>
+        <map><from path="dcterms:accessRights"/>      <to field="/dcp:dc-pivot/dc:rights"/></map>
+        <map><from path="dcterms:license"/>           <to field="/dcp:dc-pivot/dc:rights"/></map>
+
+    </maps>
+
+</mapping>

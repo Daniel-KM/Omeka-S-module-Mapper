@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+{# Twig-XML postprocess template: pivot DC → OAI-DC wrapper. #}
+<oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+           xmlns:dc="http://purl.org/dc/elements/1.1/"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+{% if dc_title %}{% for v in dc_title %}    <dc:title>{{ v }}</dc:title>
+{% endfor %}{% endif %}
+{% if dc_creator %}{% for v in dc_creator %}    <dc:creator>{{ v }}</dc:creator>
+{% endfor %}{% endif %}
+{% if dc_subject %}{% for v in dc_subject %}    <dc:subject>{{ v }}</dc:subject>
+{% endfor %}{% endif %}
+{% if dc_description %}{% for v in dc_description %}    <dc:description>{{ v }}</dc:description>
+{% endfor %}{% endif %}
+{% if dc_publisher %}{% for v in dc_publisher %}    <dc:publisher>{{ v }}</dc:publisher>
+{% endfor %}{% endif %}
+{% if dc_contributor %}{% for v in dc_contributor %}    <dc:contributor>{{ v }}</dc:contributor>
+{% endfor %}{% endif %}
+{% if dc_date %}{% for v in dc_date %}    <dc:date>{{ v }}</dc:date>
+{% endfor %}{% endif %}
+{% if dc_type %}{% for v in dc_type %}    <dc:type>{{ v }}</dc:type>
+{% endfor %}{% endif %}
+{% if dc_format %}{% for v in dc_format %}    <dc:format>{{ v }}</dc:format>
+{% endfor %}{% endif %}
+{% if dc_identifier %}{% for v in dc_identifier %}    <dc:identifier>{{ v }}</dc:identifier>
+{% endfor %}{% endif %}
+{% if dc_source %}{% for v in dc_source %}    <dc:source>{{ v }}</dc:source>
+{% endfor %}{% endif %}
+{% if dc_language %}{% for v in dc_language %}    <dc:language>{{ v }}</dc:language>
+{% endfor %}{% endif %}
+{% if dc_relation %}{% for v in dc_relation %}    <dc:relation>{{ v }}</dc:relation>
+{% endfor %}{% endif %}
+{% if dc_coverage %}{% for v in dc_coverage %}    <dc:coverage>{{ v }}</dc:coverage>
+{% endfor %}{% endif %}
+{% if dc_rights %}{% for v in dc_rights %}    <dc:rights>{{ v }}</dc:rights>
+{% endfor %}{% endif %}
+</oai_dc:dc>
