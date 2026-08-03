@@ -11,14 +11,15 @@ source string or record and a destination value or resource.
 Default mappings are available for Unimarc, EAD, Lido (profil Ministère de la Culture)
 and Mets.
 
-This module is used in modules:
+This module is used in particular in modules:
 - [Advanced Resource Template] to define autofillers and autovalues,
-- [CopIdRef] to create local resource from French authorities [IdRef],
+- [Bulk Export] to output any resource to common formats (spreadsheet, sql, xml,
+  etc.),
 - [Bulk Import] to convert any source (spreadsheet, sql, xml, etc.) into omeka
   resource,
+- [CopIdRef] to create local resource from French authorities [IdRef],
+- [Oai-Pmh Harvester] to convert any source (generally xml) into omeka resource,
 - [Urify] to convert a name into a value suggest uri or to fill a full resource.
-
-And many more (work in progress): [OaiPmh Harvester], [Bulk Export], etc.
 
 
 Installation
@@ -1016,9 +1017,9 @@ Copyright
 This module is a merge and improvement of previous modules [Advanced Resource Template],
 [CopIdRef], [Bulk Import] and various old scripts.
 
-
 The merge of modules was implemented for the module [Urify] designed for the
 [digital library Manioc] of the [Université des Antilles et de la Guyane].
+
 
 [Mapper]: https://gitlab.com/Daniel-KM/Omeka-S-module-Mapper
 [Omeka S]: https://omeka.org/s
@@ -1026,10 +1027,9 @@ The merge of modules was implemented for the module [Urify] designed for the
 [Bulk Export]: https://gitlab.com/Daniel-KM/Omeka-S-module-BulkExport
 [Bulk Import]: https://gitlab.com/Daniel-KM/Omeka-S-module-BulkImport
 [CopIdRef]: https://gitlab.com/Daniel-KM/Omeka-S-module-CopIdRef
-[Urify]: https://gitlab.com/Daniel-KM/Omeka-S-module-Urify
 [OaiPmh Harvester]: https://gitlab.com/Daniel-KM/Omeka-S-module-OaiPmhHarvester
 [installing a module]: https://omeka.org/s/docs/user-manual/modules/
-[Mapper.zip]: https://github.com/Daniel-KM/Omeka-S-module-Mapper/releases
+[Mapper.zip]: https://gitlab.com/Daniel-KM/Omeka-S-module-Mapper/-/releases
 [module issues]: https://gitlab.com/Daniel-KM/Omeka-S-module-Mapper/issues
 [CodeMirror]: https://codemirror.net
 [Common]: https://gitlab.com/Daniel-KM/Omeka-S-module-Common
