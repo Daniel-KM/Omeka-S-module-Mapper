@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Real OAI-PMH GetRecord response (oai_dc), canonical example from the
+    Open Archives Initiative protocol guidelines.
+    @link https://www.openarchives.org/OAI/openarchivesprotocol.html#dublincore
+-->
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+    <responseDate>2001-12-14T08:55:46Z</responseDate>
+    <request verb="GetRecord" identifier="oai:arXiv.org:cs/0112017"
+             metadataPrefix="oai_dc">http://arXiv.org/oai2</request>
+    <GetRecord>
+        <record>
+            <header>
+                <identifier>oai:arXiv.org:cs/0112017</identifier>
+                <datestamp>2001-12-14</datestamp>
+                <setSpec>cs</setSpec>
+            </header>
+            <metadata>
+                <oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                           xmlns:dc="http://purl.org/dc/elements/1.1/"
+                           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                           xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                    <dc:title>Using Structural Metadata to Localize Experience of Digital Content</dc:title>
+                    <dc:creator>Dushay, Naomi</dc:creator>
+                    <dc:subject>Digital Libraries</dc:subject>
+                    <dc:description>With the increasing technical sophistication of both information consumers and providers, there is increasing demand for more meaningful experiences of digital information.</dc:description>
+                    <dc:date>2001-12-14</dc:date>
+                    <dc:type>e-print</dc:type>
+                    <dc:identifier>http://arXiv.org/abs/cs/0112017</dc:identifier>
+                </oai_dc:dc>
+            </metadata>
+        </record>
+    </GetRecord>
+</OAI-PMH>

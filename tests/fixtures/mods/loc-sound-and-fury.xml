@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Real MODS 3.7 bibliographic record, canonical "Sound and fury" book
+    example from the Library of Congress MODS User Guidelines.
+    @link https://www.loc.gov/standards/mods/v3/mods-userguide-examples.html
+
+    The mods: prefix is declared explicitly: the import mapping queries
+    //mods:title etc., and the XPath querier does not pre-register the MODS
+    namespace, so a default-namespace notice would not match. Names use
+    marcrelator role codes ("aut"), which the KISS mapping does not map to
+    dcterms:creator (it expects roleTerm='creator').
+-->
+<mods:mods xmlns:mods="http://www.loc.gov/mods/v3"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-7.xsd"
+           version="3.7">
+    <mods:titleInfo>
+        <mods:title>Sound and fury</mods:title>
+        <mods:subTitle>the making of the punditocracy</mods:subTitle>
+    </mods:titleInfo>
+    <mods:name type="personal">
+        <mods:namePart>Alterman, Eric</mods:namePart>
+        <mods:role>
+            <mods:roleTerm authority="marcrelator" type="code">aut</mods:roleTerm>
+        </mods:role>
+    </mods:name>
+    <mods:typeOfResource>text</mods:typeOfResource>
+    <mods:originInfo>
+        <mods:place>
+            <mods:placeTerm type="text">Ithaca, N.Y</mods:placeTerm>
+        </mods:place>
+        <mods:publisher>Cornell University Press</mods:publisher>
+        <mods:dateIssued>c1999</mods:dateIssued>
+        <mods:issuance>monographic</mods:issuance>
+    </mods:originInfo>
+    <mods:language>
+        <mods:languageTerm authority="iso639-2b" type="code">eng</mods:languageTerm>
+    </mods:language>
+    <mods:physicalDescription>
+        <mods:extent>ix, 322 p. ; 23 cm.</mods:extent>
+    </mods:physicalDescription>
+    <mods:subject authority="lcsh">
+        <mods:topic>Mass media</mods:topic>
+        <mods:topic>Political aspects</mods:topic>
+        <mods:geographic>United States</mods:geographic>
+    </mods:subject>
+    <mods:identifier type="isbn">0801486394</mods:identifier>
+    <mods:recordInfo>
+        <mods:recordContentSource>DLC</mods:recordContentSource>
+        <mods:recordCreationDate encoding="marc">990730</mods:recordCreationDate>
+    </mods:recordInfo>
+</mods:mods>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Real UNIMARC bibliographic record (marcxchange slim) in the style served
+    by the BnF SRU gateway for Gallica. The default namespace exercises the
+    import mapping's local-name() tolerance (it does not rely on a prefix).
+    @link https://api.bnf.fr/fr/api-sru-bnf
+-->
+<record xmlns="info:lc/xmlns/marcxchange-v2" format="UNIMARC" type="Bibliographic">
+    <leader>00501nam0 2200169   450 </leader>
+    <controlfield tag="001">FRBNF37745902</controlfield>
+    <controlfield tag="100">20010101              frey50       ba</controlfield>
+    <datafield tag="200" ind1="1" ind2=" ">
+        <subfield code="a">Les misérables</subfield>
+        <subfield code="f">Victor Hugo</subfield>
+    </datafield>
+    <datafield tag="210" ind1=" " ind2=" ">
+        <subfield code="a">Paris</subfield>
+        <subfield code="c">Gallimard</subfield>
+        <subfield code="d">1951</subfield>
+    </datafield>
+    <datafield tag="215" ind1=" " ind2=" ">
+        <subfield code="a">1781 p.</subfield>
+        <subfield code="d">18 cm</subfield>
+    </datafield>
+    <datafield tag="300" ind1=" " ind2=" ">
+        <subfield code="a">Édition de référence</subfield>
+    </datafield>
+    <datafield tag="606" ind1=" " ind2=" ">
+        <subfield code="a">Roman français</subfield>
+    </datafield>
+    <datafield tag="700" ind1=" " ind2="1">
+        <subfield code="a">Hugo</subfield>
+        <subfield code="b">Victor</subfield>
+    </datafield>
+    <datafield tag="702" ind1=" " ind2="1">
+        <subfield code="a">Rosa</subfield>
+        <subfield code="b">Guy</subfield>
+    </datafield>
+    <datafield tag="856" ind1=" " ind2=" ">
+        <subfield code="u">https://gallica.bnf.fr/ark:/12148/bpt6k375010</subfield>
+    </datafield>
+</record>

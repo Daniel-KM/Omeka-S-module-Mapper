@@ -45,6 +45,7 @@
             <file>tests/MapperTest/Stdlib/SerializeTest.php</file>
             <file>tests/MapperTest/Stdlib/PostprocessTest.php</file>
             <file>tests/MapperTest/Stdlib/RoundTripTest.php</file>
+            <file>tests/MapperTest/Stdlib/CanonicalNoticesTest.php</file>
         </testsuite>
         <!-- Service factory tests -->
         <testsuite name="service">
@@ -72,6 +73,7 @@
             <file>tests/MapperTest/Stdlib/ContentDmMappingTest.php</file>
             <file>tests/MapperTest/Stdlib/MapperConversionTest.php</file>
             <file>tests/MapperTest/Stdlib/MapperTest.php</file>
+            <file>tests/MapperTest/Stdlib/CanonicalNoticesTest.php</file>
         </testsuite>
     </testsuites>
     <php>

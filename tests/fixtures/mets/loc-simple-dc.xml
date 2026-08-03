@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Real METS document with a Dublin Core descriptive section, following the
+    Library of Congress METS examples. The DC payload sits directly under
+    mets:xmlData (MDTYPE="DC"), as expected by the import mapping
+    (//mets:xmlData/dc:*).
+    @link https://www.loc.gov/standards/mets/mets-examples.html
+-->
+<mets:mets xmlns:mets="http://www.loc.gov/METS/"
+           xmlns:dc="http://purl.org/dc/elements/1.1/"
+           xmlns:xlink="http://www.w3.org/1999/xlink"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://www.loc.gov/METS/ http://www.loc.gov/standards/mets/mets.xsd"
+           OBJID="loc-simple-001" LABEL="A simple METS example" TYPE="book">
+    <mets:metsHdr CREATEDATE="2003-07-04T15:00:00">
+        <mets:agent ROLE="CREATOR" TYPE="ORGANIZATION">
+            <mets:name>Library of Congress</mets:name>
+        </mets:agent>
+    </mets:metsHdr>
+    <mets:dmdSec ID="DM1">
+        <mets:mdWrap MDTYPE="DC">
+            <mets:xmlData>
+                <dc:title>The Adventures of Tom Sawyer</dc:title>
+                <dc:creator>Twain, Mark</dc:creator>
+                <dc:date>1876</dc:date>
+                <dc:type>text</dc:type>
+                <dc:identifier>loc-simple-001</dc:identifier>
+                <dc:rights>Public domain</dc:rights>
+            </mets:xmlData>
+        </mets:mdWrap>
+    </mets:dmdSec>
+    <mets:fileSec>
+        <mets:fileGrp>
+            <mets:file ID="FILE001" MIMETYPE="image/jpeg">
+                <mets:FLocat LOCTYPE="URL" xlink:href="tom001.jpg"/>
+            </mets:file>
+        </mets:fileGrp>
+    </mets:fileSec>
+    <mets:structMap>
+        <mets:div TYPE="book" LABEL="Tom Sawyer">
+            <mets:fptr FILEID="FILE001"/>
+        </mets:div>
+    </mets:structMap>
+</mets:mets>
