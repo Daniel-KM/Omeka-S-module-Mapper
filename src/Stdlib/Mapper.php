@@ -2165,6 +2165,18 @@ class Mapper
             'tei' => 'http://www.tei-c.org/ns/1.0',
             'xlink' => 'http://www.w3.org/1999/xlink',
             'xsi' => 'http://www.w3.org/2001/XMLSchema-instance',
+            // Linked-data vocabularies for digital-object / surrogate links,
+            // mirroring the formats recommended by the DigitalObject module.
+            'bf' => 'http://id.loc.gov/ontologies/bibframe/',
+            'bibo' => 'http://purl.org/ontology/bibo/',
+            'crm' => 'http://www.cidoc-crm.org/cidoc-crm/',
+            'edm' => 'http://www.europeana.eu/schemas/edm/',
+            'pcdm' => 'http://pcdm.org/models#',
+            'premis-rdf' => 'http://www.loc.gov/premis/rdf/v3#',
+            'rdam' => 'http://rdaregistry.info/Elements/m/',
+            'rdaw' => 'http://rdaregistry.info/Elements/w/',
+            'rico' => 'https://www.ica.org/standards/RiC/ontology#',
+            'schema' => 'http://schema.org/',
         ];
         foreach ($commonNamespaces as $prefix => $uri) {
             $xpath->registerNamespace($prefix, $uri);
