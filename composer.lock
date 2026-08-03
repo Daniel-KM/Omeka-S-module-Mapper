@@ -4,21 +4,27 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "bbab3829653d9c83b19ad7a5edbe15d0",
+    "content-hash": "284f5f16fb26dec113375a764d716b96",
     "packages": [
         {
             "name": "daniel-km/simple-iso-3166-1",
-            "version": "0.2.1",
+            "version": "0.3.0",
             "source": {
                 "type": "git",
                 "url": "https://gitlab.com/Daniel-KM/Simple-ISO-3166-1.git",
-                "reference": "ef6758a388888bddd9ecb826203753ca41f218a4"
+                "reference": "51dfcd5e0ff95177a28d06f83e363fb92806e1bc"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://gitlab.com/api/v4/projects/Daniel-KM%2FSimple-ISO-3166-1/repository/archive.zip?sha=ef6758a388888bddd9ecb826203753ca41f218a4",
-                "reference": "ef6758a388888bddd9ecb826203753ca41f218a4",
+                "url": "https://gitlab.com/api/v4/projects/Daniel-KM%2FSimple-ISO-3166-1/repository/archive.zip?sha=51dfcd5e0ff95177a28d06f83e363fb92806e1bc",
+                "reference": "51dfcd5e0ff95177a28d06f83e363fb92806e1bc",
                 "shasum": ""
+            },
+            "require": {
+                "php": ">=7.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^9"
             },
             "type": "library",
             "autoload": {
@@ -46,21 +52,27 @@
                 "issues": "https://gitlab.com/Daniel-KM/Simple-ISO-3166-1/-/issues",
                 "source": "https://gitlab.com/Daniel-KM/Simple-ISO-3166-1"
             },
-            "time": "2025-07-07T00:00:00+00:00"
+            "time": "2026-08-03T00:00:00+00:00"
         },
         {
             "name": "daniel-km/simple-iso-639-3",
-            "version": "0.2.2",
+            "version": "0.3.0",
             "source": {
                 "type": "git",
                 "url": "https://gitlab.com/Daniel-KM/Simple-ISO-639-3.git",
-                "reference": "fc017f1d4ee0549cd7b2f2c206ef7c47a947de2c"
+                "reference": "a23604ce1086952911232d39b941c7e0c009c85a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://gitlab.com/api/v4/projects/Daniel-KM%2FSimple-ISO-639-3/repository/archive.zip?sha=fc017f1d4ee0549cd7b2f2c206ef7c47a947de2c",
-                "reference": "fc017f1d4ee0549cd7b2f2c206ef7c47a947de2c",
+                "url": "https://gitlab.com/api/v4/projects/Daniel-KM%2FSimple-ISO-639-3/repository/archive.zip?sha=a23604ce1086952911232d39b941c7e0c009c85a",
+                "reference": "a23604ce1086952911232d39b941c7e0c009c85a",
                 "shasum": ""
+            },
+            "require": {
+                "php": ">=7.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^9"
             },
             "type": "library",
             "autoload": {
@@ -88,20 +100,20 @@
                 "issues": "https://gitlab.com/Daniel-KM/Simple-ISO-639-3/-/issues",
                 "source": "https://gitlab.com/Daniel-KM/Simple-ISO-639-3"
             },
-            "time": "2025-07-07T00:00:00+00:00"
+            "time": "2026-08-03T00:00:00+00:00"
         },
         {
             "name": "mtdowling/jmespath.php",
-            "version": "2.8.0",
+            "version": "2.9.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/jmespath/jmespath.php.git",
-                "reference": "a2a865e05d5f420b50cc2f85bb78d565db12a6bc"
+                "reference": "2157c5e50e813ec6a96c1eed3be7f64a20fb32a8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/jmespath/jmespath.php/zipball/a2a865e05d5f420b50cc2f85bb78d565db12a6bc",
-                "reference": "a2a865e05d5f420b50cc2f85bb78d565db12a6bc",
+                "url": "https://api.github.com/repos/jmespath/jmespath.php/zipball/2157c5e50e813ec6a96c1eed3be7f64a20fb32a8",
+                "reference": "2157c5e50e813ec6a96c1eed3be7f64a20fb32a8",
                 "shasum": ""
             },
             "require": {
@@ -110,7 +122,7 @@
             },
             "require-dev": {
                 "composer/xdebug-handler": "^3.0.3",
-                "phpunit/phpunit": "^8.5.33"
+                "phpunit/phpunit": "^8.5.52"
             },
             "bin": [
                 "bin/jp.php"
@@ -118,7 +130,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "2.8-dev"
+                    "dev-master": "2.9-dev"
                 }
             },
             "autoload": {
@@ -152,9 +164,9 @@
             ],
             "support": {
                 "issues": "https://github.com/jmespath/jmespath.php/issues",
-                "source": "https://github.com/jmespath/jmespath.php/tree/2.8.0"
+                "source": "https://github.com/jmespath/jmespath.php/tree/2.9.2"
             },
-            "time": "2024-09-04T18:46:31+00:00"
+            "time": "2026-07-06T18:56:19+00:00"
         },
         {
             "name": "openspout/openspout",
@@ -317,6 +329,91 @@
                 }
             ],
             "time": "2025-03-22T00:28:17+00:00"
+        },
+        {
+            "name": "symfony/polyfill-mbstring",
+            "version": "v1.38.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/polyfill-mbstring.git",
+                "reference": "d3d318bad5e7a1bfbd026009c8bfb8d8f99ae6b6"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/polyfill-mbstring/zipball/d3d318bad5e7a1bfbd026009c8bfb8d8f99ae6b6",
+                "reference": "d3d318bad5e7a1bfbd026009c8bfb8d8f99ae6b6",
+                "shasum": ""
+            },
+            "require": {
+                "ext-iconv": "*",
+                "php": ">=7.2"
+            },
+            "provide": {
+                "ext-mbstring": "*"
+            },
+            "suggest": {
+                "ext-mbstring": "For best performance"
+            },
+            "type": "library",
+            "extra": {
+                "thanks": {
+                    "url": "https://github.com/symfony/polyfill",
+                    "name": "symfony/polyfill"
+                }
+            },
+            "autoload": {
+                "files": [
+                    "bootstrap.php"
+                ],
+                "psr-4": {
+                    "Symfony\\Polyfill\\Mbstring\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Nicolas Grekas",
+                    "email": "p@tchwork.com"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "https://symfony.com/contributors"
+                }
+            ],
+            "description": "Symfony polyfill for the Mbstring extension",
+            "homepage": "https://symfony.com",
+            "keywords": [
+                "compatibility",
+                "mbstring",
+                "polyfill",
+                "portable",
+                "shim"
+            ],
+            "support": {
+                "source": "https://github.com/symfony/polyfill-mbstring/tree/v1.38.2"
+            },
+            "funding": [
+                {
+                    "url": "https://symfony.com/sponsor",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/fabpot",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/nicolas-grekas",
+                    "type": "github"
+                },
+                {
+                    "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
+                    "type": "tidelift"
+                }
+            ],
+            "time": "2026-05-27T06:59:30+00:00"
         }
     ],
     "packages-dev": [],
