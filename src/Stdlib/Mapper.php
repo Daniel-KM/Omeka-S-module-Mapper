@@ -2127,20 +2127,21 @@ class Mapper
 
         $xpath = new DOMXPath($xml);
 
-        // Register common rdf namespaces as fallbacks.
-        // These are used by IdRef, BnF, and other authority providers.
+        // Register common namespaces as fallbacks for XPath queries, so an
+        // import mapping matches real notices whatever prefix the source
+        // document uses, even a default namespace. A namespace declared in the
+        // document still overrides the matching fallback below.
         static $commonNamespaces = [
+            // Authority providers (IdRef, BnF, dbpedia…) and core RDF.
             'bio' => 'http://purl.org/vocab/bio/0.1/',
             'bnf-onto' => 'http://data.bnf.fr/ontology/bnf-onto/',
             'dbpedia-owl' => 'http://dbpedia.org/ontology/',
             'dc' => 'http://purl.org/dc/elements/1.1/',
             'dcterms' => 'http://purl.org/dc/terms/',
-            'ead' => 'urn:isbn:1-931666-22-9',
             'foaf' => 'http://xmlns.com/foaf/0.1/',
             'gml' => 'http://www.opengis.net/gml',
             'idref' => 'http://www.idref.fr/',
             'isni' => 'https://isni.org/ontology#',
-            'lido' => 'http://www.lido-schema.org',
             'owl' => 'http://www.w3.org/2002/07/owl#',
             'rdaGr2' => 'http://rdvocab.info/ElementsGr2/',
             'rdaGr3' => 'http://rdvocab.info/ElementsGr3/',
@@ -2148,6 +2149,22 @@ class Mapper
             'rdfs' => 'http://www.w3.org/2000/01/rdf-schema#',
             'skos' => 'http://www.w3.org/2004/02/skos/core#',
             'xsd' => 'http://www.w3.org/2001/XMLSchema#',
+            // XML metadata exchange formats used as import sources.
+            'alto' => 'http://www.loc.gov/standards/alto/ns-v4#',
+            'dcmitype' => 'http://purl.org/dc/dcmitype/',
+            'ead' => 'urn:isbn:1-931666-22-9',
+            'lido' => 'http://www.lido-schema.org',
+            'marc' => 'http://www.loc.gov/MARC21/slim',
+            'marcxchange' => 'info:lc/xmlns/marcxchange-v2',
+            'mets' => 'http://www.loc.gov/METS/',
+            'mods' => 'http://www.loc.gov/mods/v3',
+            'oai' => 'http://www.openarchives.org/OAI/2.0/',
+            'oai_dc' => 'http://www.openarchives.org/OAI/2.0/oai_dc/',
+            'premis' => 'http://www.loc.gov/premis/v3',
+            'srw' => 'http://www.loc.gov/zing/srw/',
+            'tei' => 'http://www.tei-c.org/ns/1.0',
+            'xlink' => 'http://www.w3.org/1999/xlink',
+            'xsi' => 'http://www.w3.org/2001/XMLSchema-instance',
         ];
         foreach ($commonNamespaces as $prefix => $uri) {
             $xpath->registerNamespace($prefix, $uri);
