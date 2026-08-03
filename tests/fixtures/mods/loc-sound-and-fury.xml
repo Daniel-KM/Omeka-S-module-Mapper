@@ -4,11 +4,9 @@
     example from the Library of Congress MODS User Guidelines.
     @link https://www.loc.gov/standards/mods/v3/mods-userguide-examples.html
 
-    The mods: prefix is declared explicitly: the import mapping queries
-    //mods:title etc., and the XPath querier does not pre-register the MODS
-    namespace, so a default-namespace notice would not match. Names use
-    marcrelator role codes ("aut"), which the KISS mapping does not map to
-    dcterms:creator (it expects roleTerm='creator').
+    The mods: prefix is declared explicitly so the import mapping queries
+    (//mods:title etc.) match. Names use marcrelator role codes ("aut"), which
+    the import mapping maps to dcterms:creator alongside its own text roles.
 -->
 <mods:mods xmlns:mods="http://www.loc.gov/mods/v3"
            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"

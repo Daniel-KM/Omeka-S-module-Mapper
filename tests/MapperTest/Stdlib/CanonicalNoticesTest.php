@@ -97,9 +97,9 @@ class CanonicalNoticesTest extends MapperDbTestCase
         $this->assertSame(['eng'], $this->valuesOf($result, 'dcterms:language'));
         $this->assertSame(['0801486394'], $this->valuesOf($result, 'dcterms:identifier'));
 
-        // Known gap: marcrelator role code "aut" is not mapped to creator (the
-        // mapping expects roleTerm='creator'). Pinned to flag any improvement.
-        $this->assertArrayNotHasKey('dcterms:creator', $result);
+        // The marcrelator role code "aut" is mapped to creator (the mapping
+        // accepts both our text roles and the common MARC relator codes).
+        $this->assertSame(['Alterman, Eric'], $this->valuesOf($result, 'dcterms:creator'));
     }
 
     public function testParsesLocMetsSimpleDc(): void

@@ -31,10 +31,12 @@
         <map><from xpath="//mods:title"/>
             <to field="dcterms:title"/></map>
 
-        <map><from xpath="//mods:name[mods:role/mods:roleTerm='creator']/mods:namePart"/>
+        <!-- Accept our own text roles (creator/contributor) and the common
+             MARC relator codes real notices use (aut/cre, ctb/edt/trl). -->
+        <map><from xpath="//mods:name[mods:role/mods:roleTerm[.='creator' or .='author' or .='aut' or .='cre']]/mods:namePart"/>
             <to field="dcterms:creator"/></map>
 
-        <map><from xpath="//mods:name[mods:role/mods:roleTerm='contributor']/mods:namePart"/>
+        <map><from xpath="//mods:name[mods:role/mods:roleTerm[.='contributor' or .='editor' or .='ctb' or .='edt' or .='trl']]/mods:namePart"/>
             <to field="dcterms:contributor"/></map>
 
         <map><from xpath="//mods:typeOfResource"/>
